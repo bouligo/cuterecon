@@ -33,7 +33,7 @@ class Job(QProcess):
         self.output_text += decoded
 
     def get_output_text(self):
-        command_line = f'<span style="color: white; font-size:15px">$ {self.program()} {" ".join(self.arguments())}</span>'
+        command_line = f'<span style="color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">$ {self.program()} {" ".join(self.arguments())}</span>'
 
         conv = Ansi2HTMLConverter()
         return command_line + conv.convert(self.output_text)

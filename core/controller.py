@@ -19,7 +19,7 @@ from core.models.jobmodel import JobModel
 
 
 class Controller:
-    APPLICATION_VERSION = "1.0"
+    APPLICATION_VERSION = "1.1"
     autosave_timer = QTimer()
 
     def __init__(self, ui):
@@ -44,7 +44,7 @@ class Controller:
         self.setup_models()
 
         if Config.default_configuration_loaded:
-            QMessageBox.information(None, 'No custom configuration found', 'QtRecon could not find your customized configuration file. Please copy the default example configuration file <i>config.json.example</i> to <i>config.json</i>, and edit the content to use your favorite tools.!')
+            QMessageBox.information(None, 'No custom configuration found', 'QtRecon could not find your customized configuration file. Please copy the default example configuration file <i>config.json.example</i> to <i>config.json</i>, and edit its content to use your favorite tools !')
         binaries_issues = Config.check_binaries()
         for binary_not_found in binaries_issues['not_found']:
             self.log('RUNTIME', f"Binary {binary_not_found} cannot be found.")
@@ -246,15 +246,15 @@ class Controller:
     def filter_hosts_for_port_table(self, port: str):
         self.hosts_for_port_table.filter_hostlist('port', port)
 
-
     def autorun(self, hosts_ids: list):
         for host_id in hosts_ids:
             host_details = self.host_model.get_host_details(host_id)
-            for port in host_details['ports']:
-                if port['proto'] in Config.get()['autorun'] and port['port'] in Config.get()['autorun'][port['proto']]:
-                    for program in Config.get()['autorun'][port['proto']][port['port']]:
-                        self.log('AUTORUN', f"Running {program} on {port['proto']}://{host_details['ip']}:{port['port']}")
-                        self.new_job(Config.get()['user_binaries'][program], host_details['id'], port['port'])
+            for port_details in host_details['ports']:
+                for port in ['any', port_details['port']]:
+                    if port_details['proto'] in Config.get()['autorun'] and port in Config.get()['autorun'][port_details['proto']]:
+                        for program in Config.get()['autorun'][port_details['proto']][port]:
+                            self.log('AUTORUN', f"Running {program} on {port_details['proto']}://{host_details['ip']}:{port}")
+                            self.new_job(Config.get()['user_binaries'][program], host_details['id'], port)
 
     def log(self, category: str, data: str):
         if category not in ['RUNTIME', 'INFO', 'WARNING', 'CRITICAL', 'AUTORUN']:
@@ -351,9 +351,9 @@ class Controller:
     def resume_job(self, job_id: int):
         self.job_model.get_job(job_id).resume()
 
-    def new_scan(self, target: str, speed: str, ports: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool):
+    def new_scan(self, target: str, speed: str, ports: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool, tcp_and_udp: bool):
         self.log('INFO', 'Starting new scan on ' + target)
-        self.job_model.new_scan(target, speed, ports, skip_host_discovery, version_probing, default_scripts, os_detection)
+        self.job_model.new_scan(target, speed, ports, skip_host_discovery, version_probing, default_scripts, os_detection, tcp_and_udp)
 
     def start_attached_job(self, command: str, args: list, working_directory: str, host_id: int) -> int:
         self.log('INFO', f"Starting new job ({command} {' '.join(args)})")

@@ -39,8 +39,7 @@ class Config():
             "autosave": bool,
             "autosave_interval": int,
             "preferred_interfaces": list,
-            "preferred_lport": int,
-            "preferred_sharename": str
+            "preferred_lport": int
         },
         "user_variables": dict
     }
@@ -73,7 +72,7 @@ class Config():
                 sys.exit(1)
             else:
                 print(f"Configuration file not found: {e}. Falling back to default example configuration.")
-                Config.load_config(True)
+                Config.load_config(use_default_configuration = True)
                 return
         except json.decoder.JSONDecodeError as e:
             print(f"Invalid configuration file: {e}")

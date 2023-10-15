@@ -176,12 +176,15 @@ class JobModel(QAbstractTableModel):
                 os.remove(xml_file)
                 os.remove(nmap_file)
 
-    def new_scan(self, target: str, speed: str, ports: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool):
+    def new_scan(self, target: str, speed: str, ports: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool, tcp_and_udp: bool):
         command_from_conf = Config.get()['core_binaries']['nmap']['binary']
         args_from_conf = Config.get()['core_binaries']['nmap']['args']
 
         args = [speed]
 
+        if tcp_and_udp:
+            args.append('-sS')
+            args.append('-sU')
         if version_probing:
             args.append('-sV')
         if default_scripts:

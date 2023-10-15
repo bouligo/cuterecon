@@ -5,6 +5,7 @@ from PySide2.QtCore import QPoint, QModelIndex, Qt
 
 import ipaddress  # check input for IP
 import netifaces # Get ifaces ip addr
+import html # To escape text from snippets
 
 from core.database import Database
 from core.config import Config
@@ -13,6 +14,7 @@ from ui.new_scan import New_Scan
 from ui.search import Search
 from ui.set_variables import Set_Variables
 from ui.about import About
+from utils.QNoteTextEdit import QNoteTextEdit
 
 
 class View:
@@ -22,7 +24,7 @@ class View:
 
         self.default_tabs = [{'name': 'Ports', 'object': type(QTableWidget())},
                              {'name': 'Nmap', 'object': type(QTextEdit())},
-                             {'name': 'Notes', 'object': type(QTextEdit())}]
+                             {'name': 'Notes', 'object': type(QNoteTextEdit())}]
         self.app_tabs = dict()
 
         self.setup_ui()
@@ -41,47 +43,61 @@ class View:
                 self.ui.ui.lhost.setText(netifaces.ifaddresses(interface_name)[netifaces.AF_INET][0]['addr'])
                 break
         self.ui.ui.lport.setText(str(Config.get()['user_prefs']['preferred_lport']))
-        self.ui.ui.sharename.setText(Config.get()['user_prefs']['preferred_sharename'])
         self.setup_ui_snippets_body()
 
     def setup_ui_snippets_body(self):
+        # Good luck.
+        def create_subsection(level: int, content):
+            final_subsection = ""
+            for i, chunk in enumerate(content):
+                current_string = ""
+                if isinstance(chunk, str):
+                    for char in set(self.ui.ui.escaped_chars.text()):
+                        chunk = chunk.replace(char, '\\' + char)
+                    for char in set(self.ui.ui.urlencoded_chars.text()):
+                        chunk = chunk.replace(char, '%' + str(ord(char)))
+                    chunk = html.escape(chunk)
+                    if i != len(content)-1 and isinstance(content[i+1], list):
+                        current_string += f'<h{level + 4}>{chunk}</h{level + 4}>'
+                    else:
+                        current_string += chunk + '<br />'
+                elif isinstance(chunk, list):
+                    if final_subsection and '<h' not in final_subsection:
+                        final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                    current_string += create_subsection(level+1, chunk)
+
+                if '<h' in current_string:
+                    if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
+                        final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                    final_subsection += current_string
+                else:
+                    final_subsection += current_string
+                    if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
+                        final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+
+            if final_subsection and '<h' not in final_subsection:
+                final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+            return final_subsection
+
         self.ui.ui.snippets_tabs.clear()
         tabs = {}
-        for tab in Config.get()['snippets']:
-            tabs[tab] = QTextEdit()
-            for title in Config.get()['snippets'][tab]:
-                tabs[tab].insertHtml(f"<h3>{title}</h3><br />")
-                for content in Config.get()['snippets'][tab][title]:
-                    if isinstance(content, list):
-                        tabs[tab].insertHtml(f'<h4>{content[0]}</h4><p>')
-                        for subcontent in content[1:]:
-                            subcontent = subcontent.replace("%%%LHOST%%%", self.ui.ui.lhost.text())
-                            subcontent = subcontent.replace("%%%LPORT%%%", self.ui.ui.lport.text())
-                            subcontent = subcontent.replace("%%%SHARENAME%%%", self.ui.ui.sharename.text())
-                            for char in set(self.ui.ui.escaped_chars.text()):
-                                subcontent = subcontent.replace(char, '\\' + char)
-                            for char in set(self.ui.ui.urlencoded_chars.text()):
-                                subcontent = subcontent.replace(char, '%' + str(ord(char)))
-                                subcontent = subcontent.replace(char, '%' + str(ord(char)))
-                            tabs[tab].insertPlainText(subcontent)
-                            tabs[tab].insertHtml('</p><br />')
-                        tabs[tab].insertHtml('<br />')
-                    else:
-                        content = content.replace("%%%LHOST%%%", self.ui.ui.lhost.text())
-                        content = content.replace("%%%LPORT%%%", self.ui.ui.lport.text())
-                        content = content.replace("%%%SHARENAME%%%", self.ui.ui.sharename.text())
-                        for char in set(self.ui.ui.escaped_chars.text()):
-                            content = content.replace(char, '\\' + char)
-                        for char in set(self.ui.ui.urlencoded_chars.text()):
-                            content = content.replace(char, '%' + str(ord(char)))
-                        tabs[tab].insertHtml('<p>')
-                        tabs[tab].insertPlainText(content)
-                        tabs[tab].insertHtml('</p><br />')
+        for i, tab in enumerate(Config.get()['snippets']):
+            tabs[i] = QTextEdit()
+            if not isinstance(Config.get()['snippets'][tab], list):
+                continue
+            section = ""
+            for element in Config.get()['snippets'][tab]:
+                if isinstance(element, str):
+                    section += f'<h3>{element}</h3>'
+                if isinstance(element, list):
+                    section += create_subsection(0, element)
 
-                tabs[tab].insertHtml('<br />')
+            section = section.replace("%%%LHOST%%%", self.ui.ui.lhost.text())
+            section = section.replace("%%%LPORT%%%", self.ui.ui.lport.text())
 
-            tabs[tab].moveCursor(QTextCursor.Start)
-            self.ui.ui.snippets_tabs.addTab(tabs[tab], tab)
+            tabs[i].setHtml(section)
+            tabs[i].moveCursor(QTextCursor.Start)
+            self.ui.ui.snippets_tabs.addTab(tabs[i], tab)
 
     def connect_slots(self):
         self.ui.ui.actionNew.triggered.connect(self.controller.clear_db)
@@ -114,7 +130,6 @@ class View:
         self.ui.ui.lport.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.escaped_chars.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.urlencoded_chars.textEdited.connect(self.setup_ui_snippets_body)
-        self.ui.ui.sharename.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.port_table.itemSelectionChanged.connect(self.change_filter_hosts_for_port)
         self.ui.ui.machine_list_copy_selection_to_clipboard.clicked.connect(self.machine_list_copy_selection_to_clipboard)
         self.ui.ui.machine_list_copy_all_to_clipboard.clicked.connect(self.machine_list_copy_all_to_clipboard)
@@ -466,7 +481,8 @@ class View:
                                          new_scan_dialog.ui.skip_host_discovery.checkState(),
                                          new_scan_dialog.ui.check_versions.checkState(),
                                          new_scan_dialog.ui.launch_scripts.checkState(),
-                                         new_scan_dialog.ui.os_detection.checkState())
+                                         new_scan_dialog.ui.os_detection.checkState(),
+                                         new_scan_dialog.ui.tcp_and_udp.checkState())
 
     def update_notes(self):
         current_notes = self.app_tabs['Notes'].toHtml()

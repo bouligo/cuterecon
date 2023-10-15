@@ -120,22 +120,28 @@ The autorun section defines programs to be run automatically when ports are foun
 
 # Privileged scans
 
-The final XML file created by root must be readable by your user, meaning that a restrictive umask won't let you parse nmap run as root (needed for OS detection). In that case, you have to run this tool as root, and put an empty string in core_binaries->graphical_su->binary
+The final XML file created by root must be readable by your user, meaning that a restrictive umask won't let you parse nmap run as root (needed for OS detection and syn scan mode). In that case, you have to run this tool as root, and put an empty string in core_binaries->graphical_su->binary
 
-# Todos
+# Changelog & Todos
 
-## bugs
+## Changelog
 
-- [x] File -> new doesn't work
-- [ ] Cannot stop running privileged nmap as it was launched under pkexec
+v1.1:
+- Improved code for handling snippets
+- Can now drag & drop or paste pictures into the note field
+- bug fixes
 
 ## Todo list
 
 - [x] Escaped chars in snippet tab
 - [x] Configuration template
 - [x] Save-as and Save in menu
-- [ ] Option to autosave
+- [x] Option to autosave
 - [x] First argument with the database to open
+- [x] Autorun any à fixer
+- [x] Snippets : only use list of list, where the first element is the title
+- [x] Fixed font for snippets
+- [X] Remove sharename variable & unify variables ?
 - [ ] Option to force edit command before an interactive run
 - [ ] Save configuration from GUI
 - [ ] Configure tools and configuration from GUI
@@ -149,3 +155,8 @@ The final XML file created by root must be readable by your user, meaning that a
 - [ ] search for default icons in fs ?
 - [ ] notes with rich text ? Integrated cherrytree or equivalent ?
 - [ ] Upgrade to PySide6
+
+## bugs
+
+- [x] File -> new doesn't work
+- [ ] Cannot stop running privileged nmap as it was launched under pkexec

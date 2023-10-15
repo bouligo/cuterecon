@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainwindowRQgMhy.ui'
+## Form generated from reading UI file 'mainwindowmAENLe.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.10
+## Created by: Qt User Interface Compiler version 5.15.11
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -136,8 +136,7 @@ class Ui_MainWindow(object):
         self.actionAutosave_database_every_5_mins.setEnabled(False)
         self.actionSave = QAction(MainWindow)
         self.actionSave.setObjectName(u"actionSave")
-        icon9 = QIcon(QIcon.fromTheme(u"document-save"))
-        self.actionSave.setIcon(icon9)
+        self.actionSave.setIcon(icon2)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -262,20 +261,20 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.machine_list_copy_selection_to_clipboard = QPushButton(self.services)
         self.machine_list_copy_selection_to_clipboard.setObjectName(u"machine_list_copy_selection_to_clipboard")
-        icon10 = QIcon()
+        icon9 = QIcon()
         iconThemeName = u"edit-copy"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon10 = QIcon.fromTheme(iconThemeName)
+            icon9 = QIcon.fromTheme(iconThemeName)
         else:
-            icon10.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
+            icon9.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
-        self.machine_list_copy_selection_to_clipboard.setIcon(icon10)
+        self.machine_list_copy_selection_to_clipboard.setIcon(icon9)
 
         self.horizontalLayout_7.addWidget(self.machine_list_copy_selection_to_clipboard)
 
         self.machine_list_copy_all_to_clipboard = QPushButton(self.services)
         self.machine_list_copy_all_to_clipboard.setObjectName(u"machine_list_copy_all_to_clipboard")
-        self.machine_list_copy_all_to_clipboard.setIcon(icon10)
+        self.machine_list_copy_all_to_clipboard.setIcon(icon9)
 
         self.horizontalLayout_7.addWidget(self.machine_list_copy_all_to_clipboard)
 
@@ -312,16 +311,6 @@ class Ui_MainWindow(object):
         self.lport.setObjectName(u"lport")
 
         self.horizontalLayout_4.addWidget(self.lport)
-
-        self.label_3 = QLabel(self.snippets)
-        self.label_3.setObjectName(u"label_3")
-
-        self.horizontalLayout_4.addWidget(self.label_3)
-
-        self.sharename = QLineEdit(self.snippets)
-        self.sharename.setObjectName(u"sharename")
-
-        self.horizontalLayout_4.addWidget(self.sharename)
 
         self.label_4 = QLabel(self.snippets)
         self.label_4.setObjectName(u"label_4")
@@ -422,42 +411,42 @@ class Ui_MainWindow(object):
         self.button_play = QPushButton(self.jobs_tab)
         self.button_play.setObjectName(u"button_play")
         self.button_play.setEnabled(False)
-        icon11 = QIcon()
+        icon10 = QIcon()
         iconThemeName = u"media-playback-start"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon11 = QIcon.fromTheme(iconThemeName)
+            icon10 = QIcon.fromTheme(iconThemeName)
         else:
-            icon11.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
+            icon10.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
-        self.button_play.setIcon(icon11)
+        self.button_play.setIcon(icon10)
 
         self.horizontalLayout_3.addWidget(self.button_play)
 
         self.button_pause = QPushButton(self.jobs_tab)
         self.button_pause.setObjectName(u"button_pause")
         self.button_pause.setEnabled(False)
-        icon12 = QIcon()
+        icon11 = QIcon()
         iconThemeName = u"media-playback-pause"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon12 = QIcon.fromTheme(iconThemeName)
+            icon11 = QIcon.fromTheme(iconThemeName)
         else:
-            icon12.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
+            icon11.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
-        self.button_pause.setIcon(icon12)
+        self.button_pause.setIcon(icon11)
 
         self.horizontalLayout_3.addWidget(self.button_pause)
 
         self.button_stop = QPushButton(self.jobs_tab)
         self.button_stop.setObjectName(u"button_stop")
         self.button_stop.setEnabled(False)
-        icon13 = QIcon()
+        icon12 = QIcon()
         iconThemeName = u"media-playback-stop"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon13 = QIcon.fromTheme(iconThemeName)
+            icon12 = QIcon.fromTheme(iconThemeName)
         else:
-            icon13.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
+            icon12.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
-        self.button_stop.setIcon(icon13)
+        self.button_stop.setIcon(icon12)
 
         self.horizontalLayout_3.addWidget(self.button_stop)
 
@@ -584,7 +573,6 @@ class Ui_MainWindow(object):
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"LHOST", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"LPORT", None))
         self.lport.setInputMask(QCoreApplication.translate("MainWindow", u"99999", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"SMB Sharename", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"Escape chars", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"Urlencode chars", None))
         self.reset_lhost_lport.setText(QCoreApplication.translate("MainWindow", u"Reset values", None))

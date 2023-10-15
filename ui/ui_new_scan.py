@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'new_scanvegboq.ui'
+## Form generated from reading UI file 'new_scanunsyWd.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.9
+## Created by: Qt User Interface Compiler version 5.15.11
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -17,7 +17,7 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(378, 286)
+        Dialog.resize(378, 308)
         self.verticalLayout = QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.horizontalLayout = QHBoxLayout()
@@ -91,6 +91,12 @@ class Ui_Dialog(object):
 
         self.verticalLayout.addWidget(self.os_detection)
 
+        self.tcp_and_udp = QCheckBox(Dialog)
+        self.tcp_and_udp.setObjectName(u"tcp_and_udp")
+        self.tcp_and_udp.setChecked(True)
+
+        self.verticalLayout.addWidget(self.tcp_and_udp)
+
         self.buttonBox = QDialogButtonBox(Dialog)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
@@ -113,12 +119,14 @@ class Ui_Dialog(object):
         self.target.setText("")
         self.target.setPlaceholderText(QCoreApplication.translate("Dialog", u"127.0.0.1/32", None))
         self.label_3.setText(QCoreApplication.translate("Dialog", u"Ports", None))
-        self.ports.setPlaceholderText(QCoreApplication.translate("Dialog", u"80,443,8080-8099", None))
+        self.ports.setText(QCoreApplication.translate("Dialog", u"T:-,U:53,161", None))
+        self.ports.setPlaceholderText(QCoreApplication.translate("Dialog", u"80,443,8080-8099 or T:1-1024,U:1-200", None))
         self.label_2.setText(QCoreApplication.translate("Dialog", u"Nmap speed", None))
         self.nmap_speed.setPrefix(QCoreApplication.translate("Dialog", u"-T", None))
         self.skip_host_discovery.setText(QCoreApplication.translate("Dialog", u"Skip host discovery (slower)", None))
         self.check_versions.setText(QCoreApplication.translate("Dialog", u"Determine service/version info", None))
         self.launch_scripts.setText(QCoreApplication.translate("Dialog", u"Launch default scripts", None))
         self.os_detection.setText(QCoreApplication.translate("Dialog", u"Enable OS detection (root needed)", None))
+        self.tcp_and_udp.setText(QCoreApplication.translate("Dialog", u"Scan both TCP and UDP", None))
     # retranslateUi
 
