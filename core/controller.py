@@ -19,7 +19,7 @@ from core.models.jobmodel import JobModel
 
 
 class Controller:
-    APPLICATION_VERSION = "1.2"
+    APPLICATION_VERSION = "1.3"
     autosave_timer = QTimer()
 
     def __init__(self, ui):
@@ -81,7 +81,7 @@ class Controller:
         raise NotImplementedError
 
     def reload_conf(self):
-        Config.load_config()
+        Config.load_config(False, True)
         self.view.setup_ui()
         self.ui.statusBar().showMessage('Reloaded configuration from disk !', 5000)
 

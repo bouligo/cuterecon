@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainwindowmAENLe.ui'
+## Form generated from reading UI file 'mainwindowIPHpmw.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.11
 ##
@@ -17,7 +17,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1000, 755)
+        MainWindow.resize(1200, 755)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         self.actionNew = QAction(MainWindow)
         self.actionNew.setObjectName(u"actionNew")
@@ -166,6 +166,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.host_list = QTableView(self.layoutWidget)
         self.host_list.setObjectName(u"host_list")
+        self.host_list.setMinimumSize(QSize(300, 0))
         font = QFont()
         font.setPointSize(12)
         self.host_list.setFont(font)
@@ -465,7 +466,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1000, 30))
+        self.menubar.setGeometry(QRect(0, 0, 1200, 30))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuOptions = QMenu(self.menubar)
@@ -499,7 +500,6 @@ class Ui_MainWindow(object):
         self.menuOptions.addAction(self.actionReload_configuration_from_file)
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addAction(self.actionAbout_Qt)
-        self.menuEdit.addAction(self.actionSet_variables)
         self.menuEdit.addAction(self.actionSearch_string)
 
         self.retranslateUi(MainWindow)
@@ -548,6 +548,9 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(shortcut)
         self.actionSave_running_conf_as_persistent.setText(QCoreApplication.translate("MainWindow", u"Save current configuration", None))
         self.actionReload_configuration_from_file.setText(QCoreApplication.translate("MainWindow", u"Reload configuration from file", None))
+#if QT_CONFIG(shortcut)
+        self.actionReload_configuration_from_file.setShortcut(QCoreApplication.translate("MainWindow", u"F5", None))
+#endif // QT_CONFIG(shortcut)
         self.actionAutosave_database_every_5_mins.setText(QCoreApplication.translate("MainWindow", u"Autosave database every 5 mins", None))
         self.actionSave.setText(QCoreApplication.translate("MainWindow", u"Save", None))
 #if QT_CONFIG(shortcut)

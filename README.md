@@ -126,6 +126,12 @@ The final XML file created by root must be readable by your user, meaning that a
 
 ## Changelog
 
+v1.3:
+- Increased default mainwindow size
+- Fixed a crash when the reloaded configuration was incorrectly formatted
+- Fixed a bug with snippet HTML rendering & changed font and background colors for snippets
+- Keeps current tab focused when selecting another host
+
 v1.2:
 - Bug fixes
 - Added the credentials tab for every hosts
@@ -164,3 +170,4 @@ v1.1:
 
 - [x] File -> new doesn't work
 - [ ] Cannot stop running privileged nmap as it was launched under pkexec
+- [ ] Copy/paste doesn't work under wayland

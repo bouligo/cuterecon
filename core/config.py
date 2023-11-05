@@ -2,6 +2,8 @@ import json
 import os
 import sys
 
+from PySide2.QtWidgets import QMessageBox
+
 
 class Config():
     config = None
@@ -53,7 +55,7 @@ class Config():
             f.write(configuration)
 
     @staticmethod
-    def load_config(use_default_configuration = False):
+    def load_config(use_default_configuration = False, load_previous_conf_if_current_fails = False):
         if use_default_configuration:
             Config.default_configuration_loaded = True
             configuration_file_to_use = Config.config_template_filename
@@ -75,14 +77,18 @@ class Config():
                 Config.load_config(use_default_configuration = True)
                 return
         except json.decoder.JSONDecodeError as e:
-            print(f"Invalid configuration file: {e}")
-            sys.exit(2)
+            QMessageBox.information(None, "Error while parsing configuration file", f"Invalid configuration file: {e}")
+            if not load_previous_conf_if_current_fails:
+                sys.exit(2)
+            else:
+                return
 
         if Config.check_config_structure(Config.conf_structure, conf):
             Config.config = conf
         else:
             print("The configuration is a valid json, but the data inside has an unexpected format or is missing mandatory options.")
-            sys.exit(3)
+            if not load_previous_conf_if_current_fails:
+                sys.exit(3)
 
         # Creating non-existant paths
         for path in Config.config['paths']:

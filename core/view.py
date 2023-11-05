@@ -1,3 +1,5 @@
+import re
+
 from PySide2.QtGui import QCursor, QIcon, QTextCursor
 from PySide2.QtWidgets import QApplication, QFileDialog, QTabBar, QTableWidgetItem, QMenu, QTextEdit, QTableWidget, \
     QAbstractItemView, QMessageBox, QInputDialog, QDialog, QLabel, QLineEdit, QHeaderView, QWidget, QComboBox
@@ -64,20 +66,26 @@ class View:
                         current_string += chunk + '<br />'
                 elif isinstance(chunk, list):
                     if final_subsection and '<h' not in final_subsection:
-                        final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
                     current_string += create_subsection(level+1, chunk)
 
                 if '<h' in current_string:
                     if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
-                        final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
                     final_subsection += current_string
                 else:
                     final_subsection += current_string
                     if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
-                        final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
 
             if final_subsection and '<h' not in final_subsection:
-                final_subsection = f'<p style="font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+
+            # Clean-up
+            final_subsection = re.sub('(<p[^>]+>)(<p[^>]+>)+', '\\1', final_subsection)
+            final_subsection = re.sub('(</p>)(</p>)+', '\\1', final_subsection)
+            final_subsection = re.sub('<br /></p>', '</p>', final_subsection)
+
             return final_subsection
 
         self.ui.ui.snippets_tabs.clear()
@@ -614,6 +622,8 @@ class View:
         if not host_details:
             return
 
+        current_index = self.ui.ui.application_TabWidget.currentIndex()
+
         self.reset_right_panel()
 
         ## Filling default tabs
@@ -670,6 +680,11 @@ class View:
                 self.new_tab(app['title'], app['job_id'], app['text'].replace(chr(0), ""))
             else:
                 self.new_tab(app['title'], app['job_id'], "")
+
+        # Restoring tab focus if currentIndex < 4
+        if current_index < 4:
+            self.ui.ui.application_TabWidget.setCurrentIndex(current_index)
+
 
     def update_hosts_for_port_panel(self, ports: dict):
         self.ui.ui.port_table.setRowCount(len(ports['udp']) + len(ports['tcp']))
