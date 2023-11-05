@@ -13,11 +13,12 @@ class Database:
         Database.database = sqlite3.connect(':memory:')
         Database.database.row_factory = lambda C, R: {c[0]: R[i] for i, c in enumerate(C.description)} # get dict output (https://stackoverflow.com/questions/3300464/how-can-i-get-dict-from-sqlite-query)
 
-        Database.database.execute("create table hosts(id integer primary key autoincrement not null, os text, ip, hostname, mac, highlight text, pwned integer not null default 0 check(pwned IN (0,1)) , nmap, notes)")
-        Database.database.execute("create table hosts_ports(host_id integer, proto text, port, status text, description text)")
-        Database.database.execute("create table hosts_tabs(id integer primary key autoincrement not null, host_id integer, job_id integer, title text, text)")
-        Database.database.execute("create table logs(id integer primary key autoincrement not null, date, type, log)")
-        Database.database.execute("create table jobs(id integer primary key autoincrement not null, host_id integer, type, timestamp, state, command)")
+        Database.database.execute("CREATE TABLE hosts(id integer primary key autoincrement not null, os text, ip, hostname, mac, highlight text, pwned integer not null default 0 check(pwned IN (0,1)) , nmap, notes)")
+        Database.database.execute("CREATE TABLE hosts_ports(host_id integer, proto text, port, status text, description text)")
+        Database.database.execute("CREATE TABLE hosts_tabs(id integer primary key autoincrement not null, host_id integer, job_id integer, title text, text)")
+        Database.database.execute("CREATE TABLE hosts_creds(id INTEGER primary key autoincrement not null, host_id integer, type TEXT DEFAULT 'password', domain TEXT DEFAULT '', username TEXT DEFAULT '', password TEXT DEFAULT '')")
+        Database.database.execute("CREATE TABLE logs(id integer primary key autoincrement not null, date, type, log)")
+        Database.database.execute("CREATE TABLE jobs(id integer primary key autoincrement not null, host_id integer, type, timestamp, state, command)")
 
         Database.has_unsaved_data = False
         Database.current_savefile = ""
@@ -52,6 +53,11 @@ class Database:
         Database.init_DB()
 
         source.backup(Database.database)
+
+        # Compatibility code : if table hosts_creds does not exist (QtRecon < 1.2), then create it
+        if not Database.request("SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'hosts_creds'").fetchall():
+            Database.database.execute("CREATE TABLE hosts_creds(id INTEGER primary key autoincrement not null, host_id integer, type TEXT DEFAULT 'password', domain TEXT DEFAULT '', username TEXT DEFAULT '', password TEXT DEFAULT '')")
+
         Database.database.commit()
         Database.current_savefile = filename
 

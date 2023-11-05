@@ -158,6 +158,7 @@ class HostModel(QAbstractTableModel):
         host = Database.request('select * from hosts where id = ?', (host_id, )).fetchone()
         host['ports'] = Database.request('select * from hosts_ports where host_id = ?', (host_id, )).fetchall()
         host['external_tabs'] = Database.request('select * from hosts_tabs where host_id = ?', (host_id, )).fetchall()
+        host['credentials'] = Database.request('select * from hosts_creds where host_id = ?', (host_id, )).fetchall()
         return host
 
     def get_all_host_details(self):

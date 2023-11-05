@@ -1,6 +1,6 @@
 from PySide2.QtGui import QCursor, QIcon, QTextCursor
 from PySide2.QtWidgets import QApplication, QFileDialog, QTabBar, QTableWidgetItem, QMenu, QTextEdit, QTableWidget, \
-    QAbstractItemView, QMessageBox, QInputDialog, QDialog, QLabel, QLineEdit, QHeaderView
+    QAbstractItemView, QMessageBox, QInputDialog, QDialog, QLabel, QLineEdit, QHeaderView, QWidget, QComboBox
 from PySide2.QtCore import QPoint, QModelIndex, Qt
 
 import ipaddress  # check input for IP
@@ -24,6 +24,7 @@ class View:
 
         self.default_tabs = [{'name': 'Ports', 'object': type(QTableWidget())},
                              {'name': 'Nmap', 'object': type(QTextEdit())},
+                             {'name': 'Credentials', 'object': type(QTableWidget())},
                              {'name': 'Notes', 'object': type(QNoteTextEdit())}]
         self.app_tabs = dict()
 
@@ -131,7 +132,7 @@ class View:
         self.ui.ui.escaped_chars.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.urlencoded_chars.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.port_table.itemSelectionChanged.connect(self.change_filter_hosts_for_port)
-        self.ui.ui.machine_list_copy_selection_to_clipboard.clicked.connect(self.machine_list_copy_selection_to_clipboard)
+        self.ui.ui.machine_list_copy_selection_to_clipboard.clicked.connect(lambda: self.copy_selectedIndexes_to_clipboard(self.ui.ui.hosts_for_port_table.selectedIndexes()))
         self.ui.ui.machine_list_copy_all_to_clipboard.clicked.connect(self.machine_list_copy_all_to_clipboard)
         self.ui.ui.hosts_for_port_table.customContextMenuRequested.connect(self.right_click_in_hosts_for_port_table)
 
@@ -399,6 +400,53 @@ class View:
                     self.controller.new_job(program, hosts[host]['id'], port)
                 return
 
+    def right_click_in_creds_table(self, qpoint: QPoint):
+        item = self.app_tabs['Credentials'].indexAt(qpoint)
+
+        if item is None:
+            return
+
+        top_menu = QMenu()
+
+        if item.row() >= 0 or item.column() >= 0:
+            clipboard_action = top_menu.addAction("Copy selected cells into clipboard")
+            clipboard_action.setIcon(QIcon.fromTheme("edit-copy"))
+            delete_action = top_menu.addAction("Delete credentials")
+            delete_action.setIcon(QIcon.fromTheme("edit-delete"))
+            top_menu.addSeparator()
+        insert_action = top_menu.addAction("Insert new credentials")
+        insert_action.setIcon(QIcon.fromTheme("document-new"))
+
+        action = top_menu.exec_(QCursor.pos())
+        if not action:
+            return
+
+        if action == insert_action:
+            self.app_tabs['Credentials'].insertRow(self.app_tabs['Credentials'].rowCount())
+            new_id = self.controller.create_creds()
+            self.app_tabs['Credentials'].setItem(self.app_tabs['Credentials'].rowCount()-1, 0, QTableWidgetItem(str(new_id)))
+
+            combo = QComboBox()
+            combo.addItems(["password", "hash", "ssh_key", "other"])
+            combo.setProperty('cred_id', str(new_id))
+            self.app_tabs['Credentials'].setCellWidget(self.app_tabs['Credentials'].rowCount()-1, 1, combo)
+            combo.currentTextChanged.connect(lambda new_type, qcombobox=combo: self.credentials_changed(qcombobox)) # signal in loop: https://stackoverflow.com/questions/46300229/connecting-multiples-signal-slot-in-a-for-loop-in-pyqt
+
+        elif action == clipboard_action:
+            self.copy_selectedIndexes_to_clipboard(self.app_tabs['Credentials'].selectedIndexes())
+        elif action == delete_action:
+            items = self.app_tabs['Credentials'].selectedIndexes()
+            creds_ids = []
+            rows_to_delete = []
+            for item in items:
+                creds_ids.append(self.app_tabs['Credentials'].item(item.row(), 0).text())
+                rows_to_delete.append(item.row())
+
+            for row in reversed(sorted(rows_to_delete)):
+                self.app_tabs['Credentials'].removeRow(int(row))
+
+            self.controller.delete_creds(list(set(creds_ids)))
+
     def launch_custom_command_dialog(self):
         new_scan_dialog = Custom_Command()
         new_scan_dialog.ui.detached.stateChanged.connect(lambda checked: new_scan_dialog.in_terminal.setEnabled(checked))
@@ -460,7 +508,7 @@ class View:
             if not filename.endswith('.sqlite'):
                 filename += '.sqlite'
             self.controller.save_db(filename)
-        
+
     def dialog_import_xml(self):
         filename, _ = QFileDialog.getOpenFileName(caption='Import nmap XML output', dir='.', filter='*.xml')
         if filename:
@@ -488,6 +536,14 @@ class View:
         current_notes = self.app_tabs['Notes'].toHtml()
         self.controller.update_notes_for_current_host(current_notes)
 
+    def credentials_changed(self, item: QComboBox | QTableWidgetItem):
+        columns_description = {0: "id", 1: "type", 2: "domain", 3: "username", 4: "password"}
+        if type(item) == QComboBox: # Type of cred has changed
+            self.controller.update_credentials(item.property('cred_id'), columns_description[1], item.currentText())
+        elif type(item) == QTableWidgetItem: # Any cell other than the credential type has changed
+            cred_id = self.app_tabs['Credentials'].item(item.row(), 0).text()
+            self.controller.update_credentials(cred_id, columns_description[item.column()], item.text())
+
     def new_tab(self, title: str, job_id: int, content: str = "") -> QTextEdit:
         tab = QTextEdit(content)
         tab.setReadOnly(True)
@@ -511,7 +567,10 @@ class View:
         self.close_right_panel_tabs()
 
         for widget in self.default_tabs:
-            self.app_tabs[widget['name']] = widget['object']()
+            if issubclass(widget['object'], QWidget):
+                self.app_tabs[widget['name']] = widget['object']()
+            else:
+                self.app_tabs[widget['name']] = QWidget()
             self.ui.ui.application_TabWidget.addTab(self.app_tabs[widget['name']], widget['name'])
 
         # Setup ports view
@@ -528,6 +587,19 @@ class View:
         # Setup nmap tab
         self.app_tabs['Nmap'].setReadOnly(True)
 
+        # Setup creds tab
+        self.app_tabs['Credentials'].setColumnCount(5)
+        self.app_tabs['Credentials'].setColumnHidden(0, True)
+        self.app_tabs['Credentials'].setHorizontalHeaderItem(0, QTableWidgetItem('id'))
+        self.app_tabs['Credentials'].setHorizontalHeaderItem(1, QTableWidgetItem('type'))
+        self.app_tabs['Credentials'].setHorizontalHeaderItem(2, QTableWidgetItem('domain'))
+        self.app_tabs['Credentials'].setHorizontalHeaderItem(3, QTableWidgetItem('username'))
+        self.app_tabs['Credentials'].setHorizontalHeaderItem(4, QTableWidgetItem('password'))
+        self.app_tabs['Credentials'].horizontalHeader().setStretchLastSection(True)
+        self.app_tabs['Credentials'].itemChanged.connect(self.credentials_changed)
+        self.app_tabs['Credentials'].setContextMenuPolicy(Qt.CustomContextMenu)
+        self.app_tabs['Credentials'].customContextMenuRequested.connect(self.right_click_in_creds_table)
+
         # Setup notes signal / slot
         self.app_tabs['Notes'].textChanged.connect(self.update_notes)
 
@@ -535,6 +607,7 @@ class View:
         self.ui.ui.application_TabWidget.tabBar().tabButton(0, QTabBar.RightSide).resize(0, 0)
         self.ui.ui.application_TabWidget.tabBar().tabButton(1, QTabBar.RightSide).resize(0, 0)
         self.ui.ui.application_TabWidget.tabBar().tabButton(2, QTabBar.RightSide).resize(0, 0)
+        self.ui.ui.application_TabWidget.tabBar().tabButton(3, QTabBar.RightSide).resize(0, 0)
 
     def update_right_panel(self, host: QModelIndex):
         host_details = self.controller.get_selected_host(host)
@@ -563,9 +636,28 @@ class View:
         if 'nmap' in host_details.keys():
             self.app_tabs['Nmap'].setText(host_details['nmap'])
 
+        # Credentials
+        self.app_tabs['Credentials'].blockSignals(True)
+        self.app_tabs['Credentials'].setRowCount(len(host_details['credentials']))
+        for row in range(len(host_details['credentials'])):
+            combo = QComboBox()
+            combo.addItems(["password", "hash", "ssh_key", "other"])
+            self.app_tabs['Credentials'].setCellWidget(row, 1, combo)
+
+        for i, cred in enumerate(host_details['credentials']):
+            self.app_tabs['Credentials'].setItem(i, 0, QTableWidgetItem(str(cred['id'])))
+            self.app_tabs['Credentials'].cellWidget(i, 1).setCurrentText(str(cred['type']))
+            self.app_tabs['Credentials'].cellWidget(i, 1).setProperty('cred_id', str(cred['id']))
+            self.app_tabs['Credentials'].cellWidget(i, 1).currentTextChanged.connect(lambda new_type, qcombobox=self.app_tabs['Credentials'].cellWidget(i, 1): self.credentials_changed(qcombobox)) # signal in loop: https://stackoverflow.com/questions/46300229/connecting-multiples-signal-slot-in-a-for-loop-in-pyqt
+            self.app_tabs['Credentials'].setItem(i, 2, QTableWidgetItem(str(cred['domain'])))
+            self.app_tabs['Credentials'].setItem(i, 3, QTableWidgetItem(str(cred['username'])))
+            self.app_tabs['Credentials'].setItem(i, 4, QTableWidgetItem(str(cred['password'])))
+
+        self.app_tabs['Credentials'].blockSignals(False)
+
         # Notes
         if 'notes' in host_details.keys():
-            self.app_tabs['Notes'].blockSignals(True) # Consumes less resources, and do not trigger the dirty marker on databas
+            self.app_tabs['Notes'].blockSignals(True) # Consumes less resources, and do not trigger the dirty marker on database
             try:
                 self.app_tabs['Notes'].setHtml(host_details['notes'])
             except ValueError:
@@ -616,9 +708,9 @@ class View:
 
         self.ui.ui.application_TabWidget.removeTab(tab_index)
 
-    def machine_list_copy_selection_to_clipboard(self):
+    def copy_selectedIndexes_to_clipboard(self, selectedIndexes: list):
         data = {}
-        for item in self.ui.ui.hosts_for_port_table.selectedIndexes():
+        for item in selectedIndexes:
             if item.data() is None:
                 continue
             if item.row() in data.keys():
@@ -636,5 +728,5 @@ class View:
 
     def machine_list_copy_all_to_clipboard(self):
         self.ui.ui.hosts_for_port_table.selectAll()
-        self.machine_list_copy_selection_to_clipboard()
+        self.copy_selectedIndexes_to_clipboard(self.ui.ui.hosts_for_port_table.selectedIndexes())
 

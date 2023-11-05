@@ -19,7 +19,7 @@ from core.models.jobmodel import JobModel
 
 
 class Controller:
-    APPLICATION_VERSION = "1.1"
+    APPLICATION_VERSION = "1.2"
     autosave_timer = QTimer()
 
     def __init__(self, ui):
@@ -297,6 +297,17 @@ class Controller:
         if self.get_job(tab['job_id']):
             self.get_job(tab['job_id']).kill()
         self.host_model.remove_external_tab(tab['job_id'])
+
+    def create_creds(self, host_id: str = "") -> int:
+        host = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()
+        return Database.request("INSERT INTO hosts_creds(host_id) VALUES (?) RETURNING id", (host['id'], )).fetchone()['id']
+
+    def delete_creds(self, creds_ids: list) -> None:
+        for cred_id in creds_ids:
+            Database.request("DELETE FROM hosts_creds WHERE id = ?", (cred_id, ))
+
+    def update_credentials(self, cred_id: str, column: str, new_value: str):
+        Database.request(f"UPDATE hosts_creds SET {column} = ? WHERE id = ?", (new_value, cred_id))
 
     def new_job(self, program: dict, host_id: str = "", port: str = ""):
         host_dst = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()

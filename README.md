@@ -126,6 +126,10 @@ The final XML file created by root must be readable by your user, meaning that a
 
 ## Changelog
 
+v1.2:
+- Bug fixes
+- Added the credentials tab for every hosts
+
 v1.1:
 - Improved code for handling snippets
 - Can now drag & drop or paste pictures into the note field
@@ -141,7 +145,7 @@ v1.1:
 - [x] Autorun any à fixer
 - [x] Snippets : only use list of list, where the first element is the title
 - [x] Fixed font for snippets
-- [X] Remove sharename variable & unify variables ?
+- [ ] Remove sharename variable & unify variables ? 
 - [ ] Option to force edit command before an interactive run
 - [ ] Save configuration from GUI
 - [ ] Configure tools and configuration from GUI
