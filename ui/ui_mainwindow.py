@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainwindowIPHpmw.ui'
+## Form generated from reading UI file 'mainwindowkMGUsJ.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.11
 ##
@@ -104,27 +104,17 @@ class Ui_MainWindow(object):
         self.actionEnable_automatic_tools_on_import.setObjectName(u"actionEnable_automatic_tools_on_import")
         self.actionEnable_automatic_tools_on_import.setCheckable(True)
         self.actionEnable_automatic_tools_on_import.setChecked(False)
-        self.actionSet_variables = QAction(MainWindow)
-        self.actionSet_variables.setObjectName(u"actionSet_variables")
+        self.actionSearch_string = QAction(MainWindow)
+        self.actionSearch_string.setObjectName(u"actionSearch_string")
+        self.actionSearch_string.setEnabled(True)
         icon7 = QIcon()
-        iconThemeName = u"list-add"
+        iconThemeName = u"edit-find"
         if QIcon.hasThemeIcon(iconThemeName):
             icon7 = QIcon.fromTheme(iconThemeName)
         else:
             icon7.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
-        self.actionSet_variables.setIcon(icon7)
-        self.actionSearch_string = QAction(MainWindow)
-        self.actionSearch_string.setObjectName(u"actionSearch_string")
-        self.actionSearch_string.setEnabled(True)
-        icon8 = QIcon()
-        iconThemeName = u"edit-find"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon8 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon8.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
-        self.actionSearch_string.setIcon(icon8)
+        self.actionSearch_string.setIcon(icon7)
         self.actionSave_running_conf_as_persistent = QAction(MainWindow)
         self.actionSave_running_conf_as_persistent.setObjectName(u"actionSave_running_conf_as_persistent")
         self.actionSave_running_conf_as_persistent.setEnabled(False)
@@ -137,6 +127,8 @@ class Ui_MainWindow(object):
         self.actionSave = QAction(MainWindow)
         self.actionSave.setObjectName(u"actionSave")
         self.actionSave.setIcon(icon2)
+        self.actionSet_variables = QAction(MainWindow)
+        self.actionSet_variables.setObjectName(u"actionSet_variables")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -181,15 +173,15 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_5.addWidget(self.host_list)
 
-        self.searchbox = QLineEdit(self.layoutWidget)
-        self.searchbox.setObjectName(u"searchbox")
+        self.host_list_filter = QLineEdit(self.layoutWidget)
+        self.host_list_filter.setObjectName(u"host_list_filter")
         sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.searchbox.sizePolicy().hasHeightForWidth())
-        self.searchbox.setSizePolicy(sizePolicy1)
+        sizePolicy1.setHeightForWidth(self.host_list_filter.sizePolicy().hasHeightForWidth())
+        self.host_list_filter.setSizePolicy(sizePolicy1)
 
-        self.verticalLayout_5.addWidget(self.searchbox)
+        self.verticalLayout_5.addWidget(self.host_list_filter)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -238,6 +230,7 @@ class Ui_MainWindow(object):
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.port_table.sizePolicy().hasHeightForWidth())
         self.port_table.setSizePolicy(sizePolicy3)
+        self.port_table.setMinimumSize(QSize(300, 0))
         self.port_table.setFont(font)
         self.port_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.port_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -262,20 +255,20 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.machine_list_copy_selection_to_clipboard = QPushButton(self.services)
         self.machine_list_copy_selection_to_clipboard.setObjectName(u"machine_list_copy_selection_to_clipboard")
-        icon9 = QIcon()
+        icon8 = QIcon()
         iconThemeName = u"edit-copy"
         if QIcon.hasThemeIcon(iconThemeName):
-            icon9 = QIcon.fromTheme(iconThemeName)
+            icon8 = QIcon.fromTheme(iconThemeName)
         else:
-            icon9.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
+            icon8.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
-        self.machine_list_copy_selection_to_clipboard.setIcon(icon9)
+        self.machine_list_copy_selection_to_clipboard.setIcon(icon8)
 
         self.horizontalLayout_7.addWidget(self.machine_list_copy_selection_to_clipboard)
 
         self.machine_list_copy_all_to_clipboard = QPushButton(self.services)
         self.machine_list_copy_all_to_clipboard.setObjectName(u"machine_list_copy_all_to_clipboard")
-        self.machine_list_copy_all_to_clipboard.setIcon(icon9)
+        self.machine_list_copy_all_to_clipboard.setIcon(icon8)
 
         self.horizontalLayout_7.addWidget(self.machine_list_copy_all_to_clipboard)
 
@@ -286,6 +279,43 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.addLayout(self.verticalLayout_6)
 
         self.work.addTab(self.services, "")
+        self.creds = QWidget()
+        self.creds.setObjectName(u"creds")
+        self.verticalLayout_7 = QVBoxLayout(self.creds)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.creds_table = QTableView(self.creds)
+        self.creds_table.setObjectName(u"creds_table")
+        self.creds_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.creds_table.horizontalHeader().setMinimumSectionSize(100)
+        self.creds_table.horizontalHeader().setStretchLastSection(True)
+
+        self.verticalLayout_7.addWidget(self.creds_table)
+
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.creds_table_filter = QLineEdit(self.creds)
+        self.creds_table_filter.setObjectName(u"creds_table_filter")
+        self.creds_table_filter.setMaximumSize(QSize(300, 16777215))
+
+        self.horizontalLayout_8.addWidget(self.creds_table_filter)
+
+        self.creds_table_copy_selection_to_clipboard = QPushButton(self.creds)
+        self.creds_table_copy_selection_to_clipboard.setObjectName(u"creds_table_copy_selection_to_clipboard")
+        icon9 = QIcon(QIcon.fromTheme(u"edit-copy"))
+        self.creds_table_copy_selection_to_clipboard.setIcon(icon9)
+
+        self.horizontalLayout_8.addWidget(self.creds_table_copy_selection_to_clipboard)
+
+        self.creds_table_copy_all_to_clipboard = QPushButton(self.creds)
+        self.creds_table_copy_all_to_clipboard.setObjectName(u"creds_table_copy_all_to_clipboard")
+        self.creds_table_copy_all_to_clipboard.setIcon(icon9)
+
+        self.horizontalLayout_8.addWidget(self.creds_table_copy_all_to_clipboard)
+
+
+        self.verticalLayout_7.addLayout(self.horizontalLayout_8)
+
+        self.work.addTab(self.creds, "")
         self.snippets = QWidget()
         self.snippets.setObjectName(u"snippets")
         self.snippets.setEnabled(True)
@@ -500,6 +530,7 @@ class Ui_MainWindow(object):
         self.menuOptions.addAction(self.actionReload_configuration_from_file)
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addAction(self.actionAbout_Qt)
+        self.menuEdit.addAction(self.actionSet_variables)
         self.menuEdit.addAction(self.actionSearch_string)
 
         self.retranslateUi(MainWindow)
@@ -541,7 +572,6 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.actionEnable_automatic_tools.setText(QCoreApplication.translate("MainWindow", u"Enable automatic tools", None))
         self.actionEnable_automatic_tools_on_import.setText(QCoreApplication.translate("MainWindow", u"Enable automatic tools on import", None))
-        self.actionSet_variables.setText(QCoreApplication.translate("MainWindow", u"Set variables", None))
         self.actionSearch_string.setText(QCoreApplication.translate("MainWindow", u"Search string", None))
 #if QT_CONFIG(shortcut)
         self.actionSearch_string.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+F", None))
@@ -556,7 +586,8 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.actionSave.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+S", None))
 #endif // QT_CONFIG(shortcut)
-        self.searchbox.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Search IP or hostname", None))
+        self.actionSet_variables.setText(QCoreApplication.translate("MainWindow", u"Edit custom variables", None))
+        self.host_list_filter.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Search IP or hostname", None))
         self.ImportNmap.setText(QCoreApplication.translate("MainWindow", u"&Import Nmap XML", None))
 #if QT_CONFIG(shortcut)
         self.ImportNmap.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+I", None))
@@ -573,6 +604,11 @@ class Ui_MainWindow(object):
         self.machine_list_copy_selection_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy selected items to clipboard", None))
         self.machine_list_copy_all_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy all items to clipboard", None))
         self.work.setTabText(self.work.indexOf(self.services), QCoreApplication.translate("MainWindow", u"Services", None))
+        self.creds_table_filter.setText("")
+        self.creds_table_filter.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Search string", None))
+        self.creds_table_copy_selection_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy selected items to clipboard", None))
+        self.creds_table_copy_all_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy all items to clipboard", None))
+        self.work.setTabText(self.work.indexOf(self.creds), QCoreApplication.translate("MainWindow", u"Credentials", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"LHOST", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"LPORT", None))
         self.lport.setInputMask(QCoreApplication.translate("MainWindow", u"99999", None))

@@ -10,6 +10,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon
 
 from core.config import Config
+from core.models.credsmodel import CredsModel
 from utils.NmapParser import NmapParser
 from core.view import View
 from core.database import Database
@@ -19,14 +20,12 @@ from core.models.jobmodel import JobModel
 
 
 class Controller:
-    APPLICATION_VERSION = "1.3"
+    APPLICATION_VERSION = "1.4"
     autosave_timer = QTimer()
 
     def __init__(self, ui):
-
         self.ui = ui
         self.view = View(ui, self)
-
 
         self.autosave_timer.timeout.connect(self.autosave)
         self.autosave_timer.start(Config.get()['user_prefs']['autosave_interval'])
@@ -36,8 +35,6 @@ class Controller:
         if len(sys.argv) > 1:
             file_path = os.path.realpath(sys.argv[1])
             self.open_db(file_path)
-
-
 
     def setup_initial_project(self):
         Database.init_DB()
@@ -57,25 +54,24 @@ class Controller:
 
     def setup_models(self):
         self.host_model = HostModel(self.ui, self)
-        self.hosts_for_port_table = HostModel(self.ui, self)
+        self.hosts_for_port_model = HostModel(self.ui, self)
         self.log_model = LogModel(self.ui)
         self.job_model = JobModel(self.ui, self)
-        self.ui.ui.host_list.setModel(self.host_model) # LOL ?
-        self.ui.ui.hosts_for_port_table.setModel(self.hosts_for_port_table)
+        self.creds_model = CredsModel(self.ui)
+        self.ui.ui.host_list.setModel(self.host_model)
+        self.ui.ui.hosts_for_port_table.setModel(self.hosts_for_port_model)
         self.ui.ui.log_table.setModel(self.log_model)
         self.ui.ui.job_table.setModel(self.job_model)
-        self.ui.ui.host_list.setColumnHidden(0, True)
-        self.ui.ui.hosts_for_port_table.setColumnHidden(0, True)
-        self.ui.ui.log_table.setColumnHidden(0, True)
-        self.ui.ui.job_table.setColumnHidden(0, True)
-        self.ui.ui.job_table.setColumnHidden(1, True)
-        self.ui.ui.job_table.setColumnHidden(2, True)
-        self.ui.ui.job_table.setColumnHidden(6, True)
-        self.hosts_for_port_table.filter_hostlist('port', '')
+        self.ui.ui.creds_table.setModel(self.creds_model)
+        self.view.setup_ui()
+        self.hosts_for_port_model.filter_hostlist('port', '')
         self.host_model.layoutChanged.emit()
         self.log_model.layoutChanged.emit()
         self.job_model.layoutChanged.emit()
-        self.hosts_for_port_table.layoutChanged.emit()
+        self.creds_model.layoutChanged.emit()
+        self.hosts_for_port_model.update_data()
+        self.hosts_for_port_model.layoutChanged.emit()
+        self.creds_model.update_data()
 
     def save_conf(self):
         raise NotImplementedError
@@ -100,6 +96,7 @@ class Controller:
         self.view.close_right_panel_tabs()
         self.job_model.kill_jobs()
         self.setup_initial_project()
+        self.update_hosts_for_port_panel()
         return True
 
     def autosave(self):
@@ -133,7 +130,7 @@ class Controller:
             else:
                 self.setup_models()
                 self.host_model.update_data()
-                self.hosts_for_port_table.update_data()
+                self.hosts_for_port_model.update_data()
                 self.update_hosts_for_port_panel()
                 self.log_model.update_data()
                 self.log('RUNTIME', f"Restored session {filename}")
@@ -163,29 +160,43 @@ class Controller:
     def set_host_pwned(self, index: QModelIndex):
         host = self.get_selected_host(index)
         self.host_model.set_host_pwned(host['id'])
+        self.hosts_for_port_model.update_data()
+        self.creds_model.update_data()
 
     def set_host_highlight_color(self, index: QModelIndex, color: str):
         host = self.get_selected_host(index)
         self.host_model.set_host_highlight_color(host['id'], color)
+        self.hosts_for_port_model.update_data()
+        self.creds_model.update_data()
 
     def change_host_hostname(self, index: QModelIndex, new_hostname: str):
         host = self.get_selected_host(index)
         self.host_model.change_host_hostname(host['id'], new_hostname)
         self.ui.ui.host_list.clearSelection()
+        self.hosts_for_port_model.update_data()
+        self.creds_model.update_data()
 
     def change_host_os(self, index: QModelIndex, new_os: str):
         host = self.get_selected_host(index)
         self.host_model.change_host_os(host['id'], new_os.lower())
         self.ui.ui.host_list.clearSelection()
+        self.hosts_for_port_model.update_data()
+        self.creds_model.update_data()
 
     def change_host_ip(self, index: QModelIndex, new_ip: str):
         host = self.get_selected_host(index)
         self.host_model.change_host_ip(host['id'], new_ip)
         self.ui.ui.host_list.clearSelection()
+        self.hosts_for_port_model.update_data()
+        self.creds_model.update_data()
 
     def delete_host(self, index: QModelIndex):
         host = self.get_selected_host(index)
         self.host_model.delete_host(host['id'])
+        self.hosts_for_port_model.update_data()
+        creds_to_remove = [cred['id'] for cred in self.creds_model.get_creds_for_host(host['id'])]
+        self.remove_creds(creds_to_remove)
+        self.creds_model.update_data()
 
     def get_job_details(self, job: QModelIndex):
         return self.job_model.get_job_details(job)
@@ -215,36 +226,40 @@ class Controller:
         unique_port_tcp = sorted(list(dict.fromkeys(ports_tcp)))
         self.view.update_hosts_for_port_panel({'udp':unique_port_udp, 'tcp':unique_port_tcp})
 
-    # Todo: refactor
-    def parse_nmap_xml(self, xml_file: str) -> int:
+    def parse_nmap_data(self, filetype: str, data: str | dict) -> None | list:
         '''
 
-        @param xml_file: path to xml file to parse
-        @return: new hosts and ports added to the database
+        @param filetype: type of results to parse ('nmap' or 'xml')
+        @param data: path to xml or dict of nmap file to parse
+        @return: new hosts and ports added to the database if filetype is xml, else nothing
         '''
-        nmap_parser = NmapParser(xml_file)
-        nmap_data = nmap_parser.parse_xml()
-        new_hosts = self.host_model.update_hosts(nmap_data)
+        nmap_parser = NmapParser(data)
+        if filetype == 'xml':
+            nmap_data = nmap_parser.parse_xml()
+            new_hosts = self.host_model.update_hosts(nmap_data)
+        elif filetype == 'nmap':
+            nmap_output = nmap_parser.parse_nmap()
+            self.host_model.update_nmap_output(nmap_output)
+        else:
+            return
 
         if self.ui.ui.host_list.currentIndex().row() >= 0:
             self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
-        return new_hosts
+        self.update_hosts_for_port_panel()
 
-    def parse_nmap_output(self, nmap_file: str):
-        nmap_parser = NmapParser(nmap_file)
-        nmap_output = nmap_parser.parse_nmap()
-        self.host_model.update_nmap_output(nmap_output)
+        if filetype == 'xml':
+            return new_hosts
 
-        if self.ui.ui.host_list.currentIndex().row() >= 0:
-            self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
-
-    def filter_hostlist(self, search_input):
+    def filter_hostlist(self, search_input: str):
         self.ui.ui.host_list.clearSelection()
         self.view.close_right_panel_tabs()
         self.host_model.filter_hostlist('host', search_input)
 
-    def filter_hosts_for_port_table(self, port: str):
-        self.hosts_for_port_table.filter_hostlist('port', port)
+    def filter_credstable(self, search_input: str):
+        self.creds_model.filter_credstable(search_input)
+
+    def filter_hosts_for_port_table(self, proto: str, port: str):
+        self.hosts_for_port_model.filter_hostlist('port', f"{proto}/{port}")
 
     def autorun(self, hosts_ids: list):
         for host_id in hosts_ids:
@@ -288,7 +303,6 @@ class Controller:
                         tabs.append(f"{tab['title']} : {line}")
             return notes + tabs # pas utile ?
 
-
         else:
             hosts_sql = Database.request("select distinct hosts.ip from hosts, hosts_tabs where hosts.id = hosts_tabs.host_id and (hosts_tabs.text LIKE '%' || ? || '%' OR hosts.notes LIKE '%' || ? || '%')", (search_term, search_term)).fetchall()
             return sorted(list(map(lambda host: host['ip'], hosts_sql)), key=ipaddress.IPv4Address)
@@ -300,14 +314,14 @@ class Controller:
 
     def create_creds(self, host_id: str = "") -> int:
         host = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()
-        return Database.request("INSERT INTO hosts_creds(host_id) VALUES (?) RETURNING id", (host['id'], )).fetchone()['id']
+        return self.creds_model.create_creds(host['id'])
 
-    def delete_creds(self, creds_ids: list) -> None:
+    def remove_creds(self, creds_ids: list) -> None:
         for cred_id in creds_ids:
-            Database.request("DELETE FROM hosts_creds WHERE id = ?", (cred_id, ))
+            self.creds_model.remove_creds(cred_id)
 
     def update_credentials(self, cred_id: str, column: str, new_value: str):
-        Database.request(f"UPDATE hosts_creds SET {column} = ? WHERE id = ?", (new_value, cred_id))
+        self.creds_model.update_credentials(cred_id, column, new_value)
 
     def new_job(self, program: dict, host_id: str = "", port: str = ""):
         host_dst = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()
@@ -315,9 +329,32 @@ class Controller:
 
         if 'args' in program:
             args = program['args'].copy()
+
+            # Check if creds are needed and available for this host and command
+            creds = []
+            replace_command_line_with_creds = False
+            if any(item in ' '.join(program['args']) for item in ['%%%DOMAIN%%%', '%%%USERNAME%%%']):
+                creds += Database.request("SELECT * FROM hosts_creds WHERE host_id = ?", (host_dst['id'], )).fetchall()
+            else:
+                creds_types_available = [row['type'] for row in Database.request("SELECT DISTINCT type FROM hosts_creds WHERE host_id = ?", (host_dst['id'],)).fetchall()]
+                for cred_type_available in creds_types_available:
+                        if f"%%%{cred_type_available.upper()}%%%" in  ' '.join(program['args']):
+                            creds += Database.request("SELECT * FROM hosts_creds WHERE host_id = ? AND type = ?", (host_dst['id'], cred_type_available)).fetchall()
+            if creds:
+                reply = QMessageBox.question(None, 'Valid credentials are available', f"Valid credentials are available to use against this target. Do you want to use them ?")
+                if reply == QMessageBox.Yes:
+                    credtype, domain, username, password = self.view.select_credentials_dialog(creds)
+                    if [credtype, domain, username, password] != [None, None, None, None]:  # User canceled
+                        replace_command_line_with_creds = True
+
             for i in range(len(program['args'])):
                 args[i] = args[i].replace("%%%IP%%%", host_dst['ip'])
                 args[i] = args[i].replace("%%%PORT%%%", port_dst)
+                if replace_command_line_with_creds:
+                    args[i] = args[i].replace(f"%%%DOMAIN%%%", domain)
+                    args[i] = args[i].replace(f"%%%USERNAME%%%", username)
+                    if f"%%%{credtype.upper()}%%%" in args[i]:
+                        args[i] = args[i].replace(f"%%%{credtype.upper()}%%%", password)
                 for variable in Config.get()['user_variables']:
                     if Config.get()['user_variables'][variable]:
                         args[i] = args[i].replace(f"%%%{variable}%%%", Config.get()['user_variables'][variable])
@@ -329,7 +366,7 @@ class Controller:
                         if reply[1]:
                             args[i] = args[i].replace(f"{uncaught_user_variable}", reply[0])
                         else:
-                            args[i] = args[i].replace(f"{uncaught_user_variable}", "")
+                            return
 
         else:
             args = []

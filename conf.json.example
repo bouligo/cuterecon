@@ -176,7 +176,7 @@
             "detached": true,
             "in_terminal": false,
             "binary": "/usr/bin/xfreerdp",
-            "args": ["/v:%%%IP%%%", "/d:%%%DOMAIN%%%", "/u:%%%USERNAME%%%", "/p:%%%PASSWORD%%%", "/cert:ignore", "/drive:tmp,/tmp", "/dynamic-resolution"]
+            "args": ["/v:%%%IP%%%", "/d:%%%DOMAIN%%%", "/u:%%%USERNAME%%%", "/p:%%%PASSWORD%%%", "/cert:ignore", "/drive:tmp,/tmp", "/dynamic-resolution", "/kbd:%%%XFREERDP_KEYBOARD%%%"]
         },
         "onesixtyone": {
             "name": "onesixtyone",
@@ -301,6 +301,11 @@
             "6379": [
                 "redis_script"
             ]
+        },
+        "udp": {
+            "161": [
+                "onesixtyone"
+            ]
         }
     },
     "user_prefs": {
@@ -316,9 +321,7 @@
         "preferred_lport" : 8444
     },
     "user_variables": {
-        "USERNAME": "",
-        "PASSWORD": "",
-        "DOMAIN": ""
+        "XFREERDP_KEYBOARD": "0x0000040C"
     },
     "snippets": {
         "Reverse shells":

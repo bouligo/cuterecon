@@ -161,9 +161,9 @@ class JobModel(QAbstractTableModel):
 
             if status == "Success" and ret_code == 0:
                 self.controller.send_desktop_notification('Scan finished', 'Nmap scan finished successfully !')
-                new_hosts = self.controller.parse_nmap_xml(xml_file)
+                new_hosts = self.controller.parse_nmap_data('xml', xml_file)
                 self.controller.log('INFO', f"Finished nmap scan ({len(new_hosts)} hosts)")
-                self.controller.parse_nmap_output(nmap_file)
+                self.controller.parse_nmap_data('nmap', nmap_file)
                 if Config.get()['user_prefs']['enable_autorun']:
                     self.controller.autorun(new_hosts)
                 self.controller.update_right_panel()

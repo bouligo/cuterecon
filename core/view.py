@@ -16,6 +16,7 @@ from ui.new_scan import New_Scan
 from ui.search import Search
 from ui.set_variables import Set_Variables
 from ui.about import About
+from ui.credentials import Credentials_dialog
 from utils.QNoteTextEdit import QNoteTextEdit
 
 
@@ -34,6 +35,16 @@ class View:
         self.connect_slots()
 
     def setup_ui(self):
+        self.ui.ui.host_list.setColumnHidden(0, True)
+        self.ui.ui.hosts_for_port_table.setColumnHidden(0, True)
+        self.ui.ui.creds_table.setColumnHidden(0, True)
+        self.ui.ui.log_table.setColumnHidden(0, True)
+        self.ui.ui.job_table.setColumnHidden(0, True)
+        self.ui.ui.job_table.setColumnHidden(1, True)
+        self.ui.ui.job_table.setColumnHidden(2, True)
+        self.ui.ui.job_table.setColumnHidden(6, True)
+        self.ui.ui.hosts_for_port_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.ui.creds_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.ui.actionEnable_automatic_tools.setChecked(Config.get()['user_prefs']['enable_autorun'])
         self.ui.ui.actionAutosave_database_every_5_mins.setChecked(Config.get()['user_prefs']['autosave'])
         self.ui.ui.actionEnable_automatic_tools_on_import.setChecked(Config.get()['user_prefs']['enable_autorun_on_xml_import'])
@@ -131,7 +142,11 @@ class View:
         self.ui.ui.job_table.customContextMenuRequested.connect(self.right_click_in_job_table)
         self.ui.ui.log_table.customContextMenuRequested.connect(self.right_click_in_log_table)
         self.ui.ui.application_TabWidget.tabCloseRequested.connect(self.remove_tab)
-        self.ui.ui.searchbox.textEdited.connect(self.apply_filter_on_host_list)
+        self.ui.ui.host_list_filter.textEdited.connect(self.apply_filter_on_host_list)
+        self.ui.ui.creds_table_filter.textEdited.connect(self.apply_filter_on_creds_table)
+        self.ui.ui.creds_table.customContextMenuRequested.connect(self.right_click_in_creds_table)
+        self.ui.ui.creds_table_copy_selection_to_clipboard.clicked.connect(lambda: self.copy_selectedIndexes_to_clipboard(self.ui.ui.creds_table.selectedIndexes()))
+        self.ui.ui.creds_table_copy_all_to_clipboard.clicked.connect(self.creds_table_copy_all_to_clipboard)
         self.ui.ui.actionEnable_automatic_tools.triggered.connect(lambda checked: Config.set(["user_prefs", "enable_autorun"], checked))
         self.ui.ui.actionEnable_automatic_tools_on_import.triggered.connect(lambda checked: Config.set(["user_prefs", "enable_autorun_on_xml_import"], checked))
         self.ui.ui.reset_lhost_lport.clicked.connect(self.reset_ui_snippets)
@@ -185,6 +200,23 @@ class View:
         for variable in dialog_variables:
             Config.set(["user_variables", variable], dialog_variables[variable].text())
 
+    def select_credentials_dialog(self, credentials: list) -> (str, str, str, str):
+        select_credentials_dialog = Credentials_dialog()
+        for i, credential in enumerate(credentials):
+            select_credentials_dialog.ui.creds_table.insertRow(select_credentials_dialog.ui.creds_table.rowCount())
+            select_credentials_dialog.ui.creds_table.setItem(i, 0, QTableWidgetItem(credential['type']))
+            select_credentials_dialog.ui.creds_table.setItem(i, 1, QTableWidgetItem(credential['domain']))
+            select_credentials_dialog.ui.creds_table.setItem(i, 2, QTableWidgetItem(credential['username']))
+            select_credentials_dialog.ui.creds_table.setItem(i, 3, QTableWidgetItem(credential['password']))
+        select_credentials_dialog.ui.creds_table.selectRow(0)
+        select_credentials_dialog.exec()
+
+        if select_credentials_dialog.result():
+            # Returns type, domain, username and password
+            return [cell.data() for cell in select_credentials_dialog.ui.creds_table.selectedIndexes()]
+        else:
+            return None, None, None, None
+
     def enable_buttons(self, index: QModelIndex):
         job_details = self.controller.get_job_details(index)
         if job_details['state'] == 'Running':
@@ -228,6 +260,9 @@ class View:
 
     def apply_filter_on_host_list(self, search_input: str):
         self.controller.filter_hostlist(search_input)
+
+    def apply_filter_on_creds_table(self, search_input: str):
+        self.controller.filter_credstable(search_input)
 
     def copy_ip_in_clipboard_from_hostlist(self, index: QModelIndex):
         host = self.controller.get_selected_host(index)
@@ -287,7 +322,7 @@ class View:
                 self.controller.change_host_hostname(item, new_hostname)
                 self.close_right_panel_tabs()
         elif action == set_os_action:
-            new_os, confirmed = QInputDialog.getItem(None, "Set Operating System", "Set the OS to :", ["Windows", "Linux", "Unknown"])
+            new_os, confirmed = QInputDialog.getItem(None, "Set Operating System", "Set the OS to :", ["Windows", "Linux", "IOS", "Unknown"], editable=False)
             if confirmed:
                 self.controller.change_host_os(item, new_os)
                 self.close_right_panel_tabs()
@@ -409,7 +444,12 @@ class View:
                 return
 
     def right_click_in_creds_table(self, qpoint: QPoint):
-        item = self.app_tabs['Credentials'].indexAt(qpoint)
+        if self.ui.ui.work.currentIndex() == 0: # Calling from a host
+            widget_calling = self.app_tabs['Credentials']
+        elif self.ui.ui.work.currentIndex() == 2:  # Calling from the credentials tab
+            widget_calling = self.ui.ui.creds_table
+
+        item = widget_calling.indexAt(qpoint)
 
         if item is None:
             return
@@ -421,39 +461,49 @@ class View:
             clipboard_action.setIcon(QIcon.fromTheme("edit-copy"))
             delete_action = top_menu.addAction("Delete credentials")
             delete_action.setIcon(QIcon.fromTheme("edit-delete"))
-            top_menu.addSeparator()
-        insert_action = top_menu.addAction("Insert new credentials")
-        insert_action.setIcon(QIcon.fromTheme("document-new"))
+            if self.ui.ui.work.currentIndex() == 0:
+                top_menu.addSeparator()
+        if self.ui.ui.work.currentIndex() == 0:
+            insert_action = top_menu.addAction("Insert new credentials")
+            insert_action.setIcon(QIcon.fromTheme("document-new"))
 
         action = top_menu.exec_(QCursor.pos())
         if not action:
             return
 
-        if action == insert_action:
-            self.app_tabs['Credentials'].insertRow(self.app_tabs['Credentials'].rowCount())
+        if self.ui.ui.work.currentIndex() == 0 and action == insert_action:
+            widget_calling.insertRow(widget_calling.rowCount())
             new_id = self.controller.create_creds()
-            self.app_tabs['Credentials'].setItem(self.app_tabs['Credentials'].rowCount()-1, 0, QTableWidgetItem(str(new_id)))
+            widget_calling.setItem(widget_calling.rowCount()-1, 0, QTableWidgetItem(str(new_id)))
 
             combo = QComboBox()
             combo.addItems(["password", "hash", "ssh_key", "other"])
             combo.setProperty('cred_id', str(new_id))
-            self.app_tabs['Credentials'].setCellWidget(self.app_tabs['Credentials'].rowCount()-1, 1, combo)
+            widget_calling.setCellWidget(widget_calling.rowCount()-1, 1, combo)
             combo.currentTextChanged.connect(lambda new_type, qcombobox=combo: self.credentials_changed(qcombobox)) # signal in loop: https://stackoverflow.com/questions/46300229/connecting-multiples-signal-slot-in-a-for-loop-in-pyqt
 
         elif action == clipboard_action:
-            self.copy_selectedIndexes_to_clipboard(self.app_tabs['Credentials'].selectedIndexes())
+            self.copy_selectedIndexes_to_clipboard(widget_calling.selectedIndexes())
+
         elif action == delete_action:
-            items = self.app_tabs['Credentials'].selectedIndexes()
+            items = widget_calling.selectedIndexes()
+
             creds_ids = []
             rows_to_delete = []
             for item in items:
-                creds_ids.append(self.app_tabs['Credentials'].item(item.row(), 0).text())
-                rows_to_delete.append(item.row())
+                if self.ui.ui.work.currentIndex() == 0:
+                    creds_ids.append(widget_calling.item(item.row(), 0).text())
+                    rows_to_delete.append(item.row())
+                if self.ui.ui.work.currentIndex() == 2:
+                    creds_ids.append(item.model().itemData(item)['id'])
 
-            for row in reversed(sorted(rows_to_delete)):
-                self.app_tabs['Credentials'].removeRow(int(row))
+            self.controller.remove_creds(list(set(creds_ids)))
 
-            self.controller.delete_creds(list(set(creds_ids)))
+            if self.ui.ui.work.currentIndex() == 0:
+                for row in reversed(sorted(rows_to_delete)):
+                    self.app_tabs['Credentials'].removeRow(int(row))
+            if self.ui.ui.work.currentIndex() == 2:
+                self.reset_right_panel()
 
     def launch_custom_command_dialog(self):
         new_scan_dialog = Custom_Command()
@@ -521,7 +571,7 @@ class View:
         filename, _ = QFileDialog.getOpenFileName(caption='Import nmap XML output', dir='.', filter='*.xml')
         if filename:
             self.controller.log('INFO', f"Importing Nmap results from {filename}")
-            new_hosts = self.controller.parse_nmap_xml(filename)
+            new_hosts = self.controller.parse_nmap_data('xml', filename)
 
             if Config.get()['user_prefs']['enable_autorun_on_xml_import']:
                 self.controller.autorun(new_hosts)
@@ -697,8 +747,13 @@ class View:
                 row_count += 1
 
     def change_filter_hosts_for_port(self):
-        port = self.ui.ui.port_table.item(self.ui.ui.port_table.currentRow(),1).text()
-        self.controller.filter_hosts_for_port_table(port)
+        proto = port = ""
+        if self.ui.ui.port_table.item(self.ui.ui.port_table.currentRow(),0):
+            proto = self.ui.ui.port_table.item(self.ui.ui.port_table.currentRow(),0).text()
+        if self.ui.ui.port_table.item(self.ui.ui.port_table.currentRow(),1):
+            port = self.ui.ui.port_table.item(self.ui.ui.port_table.currentRow(),1).text()
+        if proto and port:
+            self.controller.filter_hosts_for_port_table(proto, port)
 
     def remove_tab(self, tab_index: int):
         # There is a job, It is running, User wants to confirm
@@ -738,10 +793,13 @@ class View:
             clipboard_data += ';'.join(data[key]) + '\n'
 
         clipboard = QApplication.clipboard()
-        clipboard.setText(clipboard_data)
+        clipboard.setText(clipboard_data.strip('\n'))
         self.ui.statusBar().showMessage('Data copied to clipboard !', 5000)
 
     def machine_list_copy_all_to_clipboard(self):
         self.ui.ui.hosts_for_port_table.selectAll()
         self.copy_selectedIndexes_to_clipboard(self.ui.ui.hosts_for_port_table.selectedIndexes())
 
+    def creds_table_copy_all_to_clipboard(self):
+        self.ui.ui.creds_table.selectAll()
+        self.copy_selectedIndexes_to_clipboard(self.ui.ui.creds_table.selectedIndexes())

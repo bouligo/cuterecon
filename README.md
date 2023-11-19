@@ -126,6 +126,14 @@ The final XML file created by root must be readable by your user, meaning that a
 
 ## Changelog
 
+v1.4:
+- Fixed a bug where the service tab wasn't updated properly
+- Fixed a bug in the Nmap parser, where unvalid XML strings like '&#x1;' are now properly handled
+- Compatible with masscan XML outputs
+- New global view for credentials, where all creds can be seen in a single tab
+- Variables DOMAIN, USERNAME, HASH, PASSWORD, SSH_KEY can be used and replaced if valid credentials are registered for current host
+- Various ui improvements
+
 v1.3:
 - Increased default mainwindow size
 - Fixed a crash when the reloaded configuration was incorrectly formatted
@@ -151,6 +159,7 @@ v1.1:
 - [x] Autorun any à fixer
 - [x] Snippets : only use list of list, where the first element is the title
 - [x] Fixed font for snippets
+- [ ] Save location when loading new database or importing nmap scans
 - [ ] Remove sharename variable & unify variables ? 
 - [ ] Option to force edit command before an interactive run
 - [ ] Save configuration from GUI

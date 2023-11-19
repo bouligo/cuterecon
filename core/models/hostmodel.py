@@ -12,7 +12,8 @@ class HostModel(QAbstractTableModel):
         self.controller = controller
         self.hosts = []
         self.headers = ['id', 'OS', 'IP', 'Hostname']
-        self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'unknown': QIcon("icons/unknown.png")}
+        # self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'unknown': QIcon("icons/unknown.png")}
+        self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'ios': QIcon("icons/ios.png"), 'unknown': QIcon("icons/unknown.png")}
         self.filter = ""
         self.filter_type = "host"
 
@@ -20,9 +21,12 @@ class HostModel(QAbstractTableModel):
         if self.filter_type == 'host':
             hosts = Database.request("SELECT id, os, ip, hostname, pwned, highlight FROM hosts WHERE ip LIKE '%' || ? || '%' OR hostname LIKE '%' || ? || '%'", (self.filter, self.filter)).fetchall()
             self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
-        elif self.filter_type == 'port':
-            hosts = Database.request("SELECT hosts.* FROM hosts, hosts_ports WHERE hosts.id = hosts_ports.host_id AND hosts_ports.port = ?", (self.filter, )).fetchall()
+        elif self.filter_type == 'port' and '/' in self.filter:
+            proto, port = self.filter.split('/')
+            hosts = Database.request("SELECT hosts.* FROM hosts, hosts_ports WHERE hosts.id = hosts_ports.host_id AND hosts_ports.proto = ? AND hosts_ports.port = ?", (proto, port)).fetchall()
             self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
+
+        self.layoutChanged.emit()  # https://stackoverflow.com/questions/45359569/how-to-update-qtableview-on-qabstracttablemodel-change
 
     def headerData(self, col, orientation, role):
         # if role == Qt.TextAlignmentRole:
@@ -55,7 +59,6 @@ class HostModel(QAbstractTableModel):
                     return QColor(getattr(Qt, self.hosts[index.row()]['highlight']))
                 except AttributeError:
                     self.controller.log("RUNTIME", f"{self.hosts[index.row()]['highlight']} is not valid")
-                    print("Failed")
         if role == Qt.DecorationRole:
             if index.column() == 1:
                 try:
@@ -77,7 +80,6 @@ class HostModel(QAbstractTableModel):
         self.filter_type = filter_type
         self.filter = search_input
         self.update_data()
-        self.layoutChanged.emit()  # https://stackoverflow.com/questions/45359569/how-to-update-qtableview-on-qabstracttablemodel-change
 
     def update_hosts(self, hosts: dict) -> list:
         '''
@@ -104,7 +106,6 @@ class HostModel(QAbstractTableModel):
                                      (host_id, proto, port, hosts[host]['ports'][proto][port]['status'], hosts[host]['ports'][proto][port]['description']))
 
         self.update_data()
-        self.layoutChanged.emit()  # https://stackoverflow.com/questions/45359569/how-to-update-qtableview-on-qabstracttablemodel-change
         return returning_host_ids
 
     def update_notes_for_host(self, host_id: int, notes: str):

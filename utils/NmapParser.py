@@ -8,12 +8,13 @@ class NmapParser:
             self.f = ''.join(f.readlines())
 
     def parse_xml(self) -> dict:
-        root = XMLparser.fromstring(self.f)
-
         # Get online hosts
         hosts = dict()
+
+        root = XMLparser.fromstring(re.sub(r'&#([a-zA-Z0-9]+);?', r'[#\1;]', self.f))
+
         for host in root.iter('host'):
-            if host.find('status').attrib['state'] == 'down':
+            if root.attrib['scanner'] == 'nmap' and host.find('status').attrib['state'] == 'down':
                 continue
 
             ip = host.find('./address/[@addrtype="ipv4"]').attrib['addr']
