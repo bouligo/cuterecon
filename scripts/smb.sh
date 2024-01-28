@@ -67,12 +67,17 @@ if [ -z "$password" ]; then
     enum4linux-ng "$1" -A -R -u "$username" -p ''
 else
     cd /opt/CrackMapExec
-    echo "$ cme smb $1 -d '$domain' -u '$username' -p '$password' --shares" 
-    poetry run cme smb "$1" -d "$domain" -u "$username" -p "$password" --shares 2>/dev/null
-    cd -
-    
+    if [ "$domain" == "." ]; then
+        echo "$ cme smb $1 -u '$username' -p '$password' --local-auth --shares" 
+        poetry run cme smb "$1" -d "$domain" -u "$username" -p "$password" --shares 2>/dev/null
+        cd -
+    else
+        echo "$ cme smb $1 -d '$domain' -u '$username' -p '$password' --shares" 
+        poetry run cme smb "$1" -d "$domain" -u "$username" -p "$password" --shares 2>/dev/null
+        cd -
+    fi 
     echo
-    echo "$ smbclient -L //$1/ -U '$domain\\username%$password'"
+    echo "$ smbclient -L //$1/ -U '$domain\\$username%$password'"
     smbclient -L "//$1/" -U "$domain\\$username%$password"
     
     # echo
@@ -93,6 +98,6 @@ else
     nmap -sVC -p 139,445 -Pn '--script=smb-vuln-*' $1
     
     echo
-    echo "$ enum4linux-ng '$1' -A -R -w '$domain' -u '$username' -p ''"
+    echo "$ enum4linux-ng '$1' -A -R -w '$domain' -u '$username' -p '$password'"
     enum4linux-ng "$1" -A -R -w $domain -u "$username" -p "$password"
 fi

@@ -1,100 +1,69 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mainwindowkMGUsJ.ui'
+## Form generated from reading UI file 'mainwindowckqomH.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.11
+## Created by: Qt User Interface Compiler version 6.6.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *  # type: ignore
-from PySide2.QtGui import *  # type: ignore
-from PySide2.QtWidgets import *  # type: ignore
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QCheckBox,
+    QFormLayout, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QMainWindow, QMenu, QMenuBar,
+    QProgressBar, QPushButton, QRadioButton, QSizePolicy,
+    QSlider, QSpacerItem, QSpinBox, QSplitter,
+    QStatusBar, QTabWidget, QTableView, QTableWidget,
+    QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1200, 755)
+        MainWindow.resize(1200, 836)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         self.actionNew = QAction(MainWindow)
         self.actionNew.setObjectName(u"actionNew")
         self.actionNew.setEnabled(True)
-        icon = QIcon()
-        iconThemeName = u"document-new"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon = QIcon.fromTheme(iconThemeName)
-        else:
-            icon.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon = QIcon(QIcon.fromTheme(u"document-new"))
         self.actionNew.setIcon(icon)
         self.actionOpen = QAction(MainWindow)
         self.actionOpen.setObjectName(u"actionOpen")
         self.actionOpen.setEnabled(True)
-        icon1 = QIcon()
-        iconThemeName = u"document-open"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon1 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon1.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon1 = QIcon(QIcon.fromTheme(u"document-open"))
         self.actionOpen.setIcon(icon1)
         self.actionSaveAs = QAction(MainWindow)
         self.actionSaveAs.setObjectName(u"actionSaveAs")
         self.actionSaveAs.setEnabled(True)
-        icon2 = QIcon()
-        iconThemeName = u"document-save"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon2 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon2.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon2 = QIcon(QIcon.fromTheme(u"document-save"))
         self.actionSaveAs.setIcon(icon2)
         self.actionExit = QAction(MainWindow)
         self.actionExit.setObjectName(u"actionExit")
-        icon3 = QIcon()
-        iconThemeName = u"application-exit"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon3 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon3.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon3 = QIcon(QIcon.fromTheme(u"application-exit"))
         self.actionExit.setIcon(icon3)
         self.actionSettings = QAction(MainWindow)
         self.actionSettings.setObjectName(u"actionSettings")
         self.actionSettings.setEnabled(False)
-        icon4 = QIcon()
-        iconThemeName = u"preferences-system"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon4 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon4.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon4 = QIcon(QIcon.fromTheme(u"preferences-system"))
         self.actionSettings.setIcon(icon4)
         self.actionAbout = QAction(MainWindow)
         self.actionAbout.setObjectName(u"actionAbout")
-        icon5 = QIcon()
-        iconThemeName = u"help-about"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon5 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon5.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon5 = QIcon(QIcon.fromTheme(u"help-about"))
         self.actionAbout.setIcon(icon5)
         self.actionAbout_Qt = QAction(MainWindow)
         self.actionAbout_Qt.setObjectName(u"actionAbout_Qt")
         self.actionTools = QAction(MainWindow)
         self.actionTools.setObjectName(u"actionTools")
         self.actionTools.setEnabled(False)
-        icon6 = QIcon()
-        iconThemeName = u"applications-utilities"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon6 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon6.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon6 = QIcon(QIcon.fromTheme(u"applications-utilities"))
         self.actionTools.setIcon(icon6)
         self.actionEnable_automatic_tools = QAction(MainWindow)
         self.actionEnable_automatic_tools.setObjectName(u"actionEnable_automatic_tools")
@@ -107,19 +76,15 @@ class Ui_MainWindow(object):
         self.actionSearch_string = QAction(MainWindow)
         self.actionSearch_string.setObjectName(u"actionSearch_string")
         self.actionSearch_string.setEnabled(True)
-        icon7 = QIcon()
-        iconThemeName = u"edit-find"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon7 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon7.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon7 = QIcon(QIcon.fromTheme(u"edit-find"))
         self.actionSearch_string.setIcon(icon7)
         self.actionSave_running_conf_as_persistent = QAction(MainWindow)
         self.actionSave_running_conf_as_persistent.setObjectName(u"actionSave_running_conf_as_persistent")
         self.actionSave_running_conf_as_persistent.setEnabled(False)
         self.actionReload_configuration_from_file = QAction(MainWindow)
         self.actionReload_configuration_from_file.setObjectName(u"actionReload_configuration_from_file")
+        icon8 = QIcon(QIcon.fromTheme(u"view-refresh"))
+        self.actionReload_configuration_from_file.setIcon(icon8)
         self.actionAutosave_database_every_5_mins = QAction(MainWindow)
         self.actionAutosave_database_every_5_mins.setObjectName(u"actionAutosave_database_every_5_mins")
         self.actionAutosave_database_every_5_mins.setCheckable(True)
@@ -201,7 +166,7 @@ class Ui_MainWindow(object):
         self.splitter_2.addWidget(self.layoutWidget)
         self.application_TabWidget = QTabWidget(self.splitter_2)
         self.application_TabWidget.setObjectName(u"application_TabWidget")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy2.setHorizontalStretch(1)
         sizePolicy2.setVerticalStretch(1)
         sizePolicy2.setHeightForWidth(self.application_TabWidget.sizePolicy().hasHeightForWidth())
@@ -253,22 +218,21 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_7 = QHBoxLayout()
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.machine_list_view_in_host_tab = QPushButton(self.services)
+        self.machine_list_view_in_host_tab.setObjectName(u"machine_list_view_in_host_tab")
+
+        self.horizontalLayout_7.addWidget(self.machine_list_view_in_host_tab)
+
         self.machine_list_copy_selection_to_clipboard = QPushButton(self.services)
         self.machine_list_copy_selection_to_clipboard.setObjectName(u"machine_list_copy_selection_to_clipboard")
-        icon8 = QIcon()
-        iconThemeName = u"edit-copy"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon8 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon8.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
-        self.machine_list_copy_selection_to_clipboard.setIcon(icon8)
+        icon9 = QIcon(QIcon.fromTheme(u"edit-copy"))
+        self.machine_list_copy_selection_to_clipboard.setIcon(icon9)
 
         self.horizontalLayout_7.addWidget(self.machine_list_copy_selection_to_clipboard)
 
         self.machine_list_copy_all_to_clipboard = QPushButton(self.services)
         self.machine_list_copy_all_to_clipboard.setObjectName(u"machine_list_copy_all_to_clipboard")
-        self.machine_list_copy_all_to_clipboard.setIcon(icon8)
+        self.machine_list_copy_all_to_clipboard.setIcon(icon9)
 
         self.horizontalLayout_7.addWidget(self.machine_list_copy_all_to_clipboard)
 
@@ -286,6 +250,7 @@ class Ui_MainWindow(object):
         self.creds_table = QTableView(self.creds)
         self.creds_table.setObjectName(u"creds_table")
         self.creds_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.creds_table.setSortingEnabled(True)
         self.creds_table.horizontalHeader().setMinimumSectionSize(100)
         self.creds_table.horizontalHeader().setStretchLastSection(True)
 
@@ -299,9 +264,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_8.addWidget(self.creds_table_filter)
 
+        self.creds_table_view_in_host_tab = QPushButton(self.creds)
+        self.creds_table_view_in_host_tab.setObjectName(u"creds_table_view_in_host_tab")
+
+        self.horizontalLayout_8.addWidget(self.creds_table_view_in_host_tab)
+
         self.creds_table_copy_selection_to_clipboard = QPushButton(self.creds)
         self.creds_table_copy_selection_to_clipboard.setObjectName(u"creds_table_copy_selection_to_clipboard")
-        icon9 = QIcon(QIcon.fromTheme(u"edit-copy"))
         self.creds_table_copy_selection_to_clipboard.setIcon(icon9)
 
         self.horizontalLayout_8.addWidget(self.creds_table_copy_selection_to_clipboard)
@@ -382,6 +351,212 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addLayout(self.horizontalLayout_5)
 
         self.work.addTab(self.snippets, "")
+        self.screenshots = QWidget()
+        self.screenshots.setObjectName(u"screenshots")
+        self.verticalLayout_8 = QVBoxLayout(self.screenshots)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.label_10 = QLabel(self.screenshots)
+        self.label_10.setObjectName(u"label_10")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_10)
+
+        self.label_7 = QLabel(self.screenshots)
+        self.label_7.setObjectName(u"label_7")
+
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_7)
+
+        self.screenshot_cmd = QLineEdit(self.screenshots)
+        self.screenshot_cmd.setObjectName(u"screenshot_cmd")
+        self.screenshot_cmd.setEnabled(False)
+
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.screenshot_cmd)
+
+        self.label_6 = QLabel(self.screenshots)
+        self.label_6.setObjectName(u"label_6")
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_6)
+
+        self.horizontalLayout_11 = QHBoxLayout()
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.screenshot_work_folder = QLineEdit(self.screenshots)
+        self.screenshot_work_folder.setObjectName(u"screenshot_work_folder")
+
+        self.horizontalLayout_11.addWidget(self.screenshot_work_folder)
+
+        self.toolButton_2 = QToolButton(self.screenshots)
+        self.toolButton_2.setObjectName(u"toolButton_2")
+
+        self.horizontalLayout_11.addWidget(self.toolButton_2)
+
+
+        self.formLayout.setLayout(2, QFormLayout.FieldRole, self.horizontalLayout_11)
+
+        self.label_3 = QLabel(self.screenshots)
+        self.label_3.setObjectName(u"label_3")
+
+        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label_3)
+
+        self.horizontalLayout_12 = QHBoxLayout()
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.screenshot_dst_folder = QLineEdit(self.screenshots)
+        self.screenshot_dst_folder.setObjectName(u"screenshot_dst_folder")
+
+        self.horizontalLayout_12.addWidget(self.screenshot_dst_folder)
+
+        self.toolButton = QToolButton(self.screenshots)
+        self.toolButton.setObjectName(u"toolButton")
+
+        self.horizontalLayout_12.addWidget(self.toolButton)
+
+
+        self.formLayout.setLayout(3, QFormLayout.FieldRole, self.horizontalLayout_12)
+
+        self.label_9 = QLabel(self.screenshots)
+        self.label_9.setObjectName(u"label_9")
+        self.label_9.setMaximumSize(QSize(200, 16777215))
+
+        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.label_9)
+
+        self.horizontalLayout_14 = QHBoxLayout()
+        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
+        self.spinBox_screenshots_interval = QSpinBox(self.screenshots)
+        self.spinBox_screenshots_interval.setObjectName(u"spinBox_screenshots_interval")
+        self.spinBox_screenshots_interval.setMaximumSize(QSize(100, 16777215))
+        self.spinBox_screenshots_interval.setValue(15)
+
+        self.horizontalLayout_14.addWidget(self.spinBox_screenshots_interval)
+
+
+        self.formLayout.setLayout(4, QFormLayout.FieldRole, self.horizontalLayout_14)
+
+        self.label_8 = QLabel(self.screenshots)
+        self.label_8.setObjectName(u"label_8")
+
+        self.formLayout.setWidget(5, QFormLayout.LabelRole, self.label_8)
+
+        self.horizontalLayout_10 = QHBoxLayout()
+        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
+        self.pixel_slider = QSlider(self.screenshots)
+        self.pixel_slider.setObjectName(u"pixel_slider")
+        self.pixel_slider.setMaximum(5000)
+        self.pixel_slider.setSingleStep(10)
+        self.pixel_slider.setPageStep(100)
+        self.pixel_slider.setOrientation(Qt.Horizontal)
+
+        self.horizontalLayout_10.addWidget(self.pixel_slider)
+
+        self.label_slider = QLabel(self.screenshots)
+        self.label_slider.setObjectName(u"label_slider")
+
+        self.horizontalLayout_10.addWidget(self.label_slider)
+
+
+        self.formLayout.setLayout(5, QFormLayout.FieldRole, self.horizontalLayout_10)
+
+        self.checkBox_screenshot_lockscreen = QCheckBox(self.screenshots)
+        self.checkBox_screenshot_lockscreen.setObjectName(u"checkBox_screenshot_lockscreen")
+
+        self.formLayout.setWidget(6, QFormLayout.LabelRole, self.checkBox_screenshot_lockscreen)
+
+        self.horizontalLayout_13 = QHBoxLayout()
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
+        self.cmd_check_lockscreen = QLineEdit(self.screenshots)
+        self.cmd_check_lockscreen.setObjectName(u"cmd_check_lockscreen")
+
+        self.horizontalLayout_13.addWidget(self.cmd_check_lockscreen)
+
+        self.cmd_check_result_lockscreen = QLineEdit(self.screenshots)
+        self.cmd_check_result_lockscreen.setObjectName(u"cmd_check_result_lockscreen")
+        sizePolicy1.setHeightForWidth(self.cmd_check_result_lockscreen.sizePolicy().hasHeightForWidth())
+        self.cmd_check_result_lockscreen.setSizePolicy(sizePolicy1)
+        self.cmd_check_result_lockscreen.setMinimumSize(QSize(170, 0))
+
+        self.horizontalLayout_13.addWidget(self.cmd_check_result_lockscreen)
+
+
+        self.formLayout.setLayout(6, QFormLayout.FieldRole, self.horizontalLayout_13)
+
+        self.checkBox_screenshot_ignore_if_active_window = QCheckBox(self.screenshots)
+        self.checkBox_screenshot_ignore_if_active_window.setObjectName(u"checkBox_screenshot_ignore_if_active_window")
+        self.checkBox_screenshot_ignore_if_active_window.setChecked(False)
+
+        self.formLayout.setWidget(7, QFormLayout.LabelRole, self.checkBox_screenshot_ignore_if_active_window)
+
+        self.checkBox_screenshot_jpg = QCheckBox(self.screenshots)
+        self.checkBox_screenshot_jpg.setObjectName(u"checkBox_screenshot_jpg")
+
+        self.formLayout.setWidget(8, QFormLayout.LabelRole, self.checkBox_screenshot_jpg)
+
+        self.checkBox_screenshot_processes = QCheckBox(self.screenshots)
+        self.checkBox_screenshot_processes.setObjectName(u"checkBox_screenshot_processes")
+
+        self.formLayout.setWidget(9, QFormLayout.LabelRole, self.checkBox_screenshot_processes)
+
+        self.checkBox_screenshot_ocr = QCheckBox(self.screenshots)
+        self.checkBox_screenshot_ocr.setObjectName(u"checkBox_screenshot_ocr")
+        self.checkBox_screenshot_ocr.setEnabled(False)
+
+        self.formLayout.setWidget(10, QFormLayout.LabelRole, self.checkBox_screenshot_ocr)
+
+        self.ocr_binary_path = QLineEdit(self.screenshots)
+        self.ocr_binary_path.setObjectName(u"ocr_binary_path")
+        self.ocr_binary_path.setEnabled(False)
+
+        self.formLayout.setWidget(10, QFormLayout.FieldRole, self.ocr_binary_path)
+
+        self.horizontalLayout_15 = QHBoxLayout()
+        self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
+        self.radioButton_screenshots_qt = QRadioButton(self.screenshots)
+        self.radioButton_screenshots_qt.setObjectName(u"radioButton_screenshots_qt")
+        self.radioButton_screenshots_qt.setChecked(True)
+
+        self.horizontalLayout_15.addWidget(self.radioButton_screenshots_qt)
+
+        self.radioButton_screenshots_external = QRadioButton(self.screenshots)
+        self.radioButton_screenshots_external.setObjectName(u"radioButton_screenshots_external")
+
+        self.horizontalLayout_15.addWidget(self.radioButton_screenshots_external)
+
+
+        self.formLayout.setLayout(0, QFormLayout.FieldRole, self.horizontalLayout_15)
+
+
+        self.verticalLayout_8.addLayout(self.formLayout)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_8.addItem(self.verticalSpacer)
+
+        self.number_of_screenshots = QLabel(self.screenshots)
+        self.number_of_screenshots.setObjectName(u"number_of_screenshots")
+
+        self.verticalLayout_8.addWidget(self.number_of_screenshots)
+
+        self.progressBar = QProgressBar(self.screenshots)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(0)
+
+        self.verticalLayout_8.addWidget(self.progressBar)
+
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.button_start_screenshot = QPushButton(self.screenshots)
+        self.button_start_screenshot.setObjectName(u"button_start_screenshot")
+
+        self.horizontalLayout_9.addWidget(self.button_start_screenshot)
+
+        self.button_save_screenshot = QPushButton(self.screenshots)
+        self.button_save_screenshot.setObjectName(u"button_save_screenshot")
+        self.button_save_screenshot.setEnabled(False)
+
+        self.horizontalLayout_9.addWidget(self.button_save_screenshot)
+
+
+        self.verticalLayout_8.addLayout(self.horizontalLayout_9)
+
+        self.work.addTab(self.screenshots, "")
         self.splitter.addWidget(self.work)
         self.management = QTabWidget(self.splitter)
         self.management.setObjectName(u"management")
@@ -442,13 +617,7 @@ class Ui_MainWindow(object):
         self.button_play = QPushButton(self.jobs_tab)
         self.button_play.setObjectName(u"button_play")
         self.button_play.setEnabled(False)
-        icon10 = QIcon()
-        iconThemeName = u"media-playback-start"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon10 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon10.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon10 = QIcon(QIcon.fromTheme(u"media-playback-start"))
         self.button_play.setIcon(icon10)
 
         self.horizontalLayout_3.addWidget(self.button_play)
@@ -456,13 +625,7 @@ class Ui_MainWindow(object):
         self.button_pause = QPushButton(self.jobs_tab)
         self.button_pause.setObjectName(u"button_pause")
         self.button_pause.setEnabled(False)
-        icon11 = QIcon()
-        iconThemeName = u"media-playback-pause"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon11 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon11.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon11 = QIcon(QIcon.fromTheme(u"media-playback-pause"))
         self.button_pause.setIcon(icon11)
 
         self.horizontalLayout_3.addWidget(self.button_pause)
@@ -470,13 +633,7 @@ class Ui_MainWindow(object):
         self.button_stop = QPushButton(self.jobs_tab)
         self.button_stop.setObjectName(u"button_stop")
         self.button_stop.setEnabled(False)
-        icon12 = QIcon()
-        iconThemeName = u"media-playback-stop"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon12 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon12.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+        icon12 = QIcon(QIcon.fromTheme(u"media-playback-stop"))
         self.button_stop.setIcon(icon12)
 
         self.horizontalLayout_3.addWidget(self.button_stop)
@@ -496,7 +653,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1200, 30))
+        self.menubar.setGeometry(QRect(0, 0, 1200, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuOptions = QMenu(self.menubar)
@@ -534,6 +691,11 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionSearch_string)
 
         self.retranslateUi(MainWindow)
+        self.pixel_slider.valueChanged.connect(self.label_slider.setNum)
+        self.radioButton_screenshots_external.toggled.connect(self.screenshot_cmd.setEnabled)
+        self.checkBox_screenshot_lockscreen.toggled.connect(self.cmd_check_lockscreen.setEnabled)
+        self.checkBox_screenshot_lockscreen.toggled.connect(self.cmd_check_result_lockscreen.setEnabled)
+        self.checkBox_screenshot_ocr.toggled.connect(self.ocr_binary_path.setEnabled)
 
         self.work.setCurrentIndex(0)
         self.application_TabWidget.setCurrentIndex(-1)
@@ -601,11 +763,13 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"TCP/UDP", None));
         ___qtablewidgetitem1 = self.port_table.horizontalHeaderItem(1)
         ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Ports", None));
+        self.machine_list_view_in_host_tab.setText(QCoreApplication.translate("MainWindow", u"Go to host view for this machine", None))
         self.machine_list_copy_selection_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy selected items to clipboard", None))
         self.machine_list_copy_all_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy all items to clipboard", None))
         self.work.setTabText(self.work.indexOf(self.services), QCoreApplication.translate("MainWindow", u"Services", None))
         self.creds_table_filter.setText("")
         self.creds_table_filter.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Search string", None))
+        self.creds_table_view_in_host_tab.setText(QCoreApplication.translate("MainWindow", u"Go to host view for this machine", None))
         self.creds_table_copy_selection_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy selected items to clipboard", None))
         self.creds_table_copy_all_to_clipboard.setText(QCoreApplication.translate("MainWindow", u"Copy all items to clipboard", None))
         self.work.setTabText(self.work.indexOf(self.creds), QCoreApplication.translate("MainWindow", u"Credentials", None))
@@ -616,6 +780,31 @@ class Ui_MainWindow(object):
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"Urlencode chars", None))
         self.reset_lhost_lport.setText(QCoreApplication.translate("MainWindow", u"Reset values", None))
         self.work.setTabText(self.work.indexOf(self.snippets), QCoreApplication.translate("MainWindow", u"Snippets", None))
+        self.label_10.setText(QCoreApplication.translate("MainWindow", u"Screenshot source", None))
+        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Screenshot command (specify output file as %OUTPUT%)", None))
+        self.label_6.setText(QCoreApplication.translate("MainWindow", u"Temporary working directory", None))
+        self.screenshot_work_folder.setText(QCoreApplication.translate("MainWindow", u"/tmp/", None))
+        self.toolButton_2.setText(QCoreApplication.translate("MainWindow", u"...", None))
+        self.label_3.setText(QCoreApplication.translate("MainWindow", u"Final directory", None))
+        self.toolButton.setText(QCoreApplication.translate("MainWindow", u"...", None))
+        self.label_9.setText(QCoreApplication.translate("MainWindow", u"Take screenshot every ", None))
+        self.spinBox_screenshots_interval.setSuffix(QCoreApplication.translate("MainWindow", u" seconds", None))
+        self.label_8.setText(QCoreApplication.translate("MainWindow", u"Number of different pixels required between 2 screenshots :", None))
+        self.label_slider.setText(QCoreApplication.translate("MainWindow", u"0", None))
+        self.checkBox_screenshot_lockscreen.setText(QCoreApplication.translate("MainWindow", u"Don't screenshot if screen is locked", None))
+        self.cmd_check_lockscreen.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Command to check if the screen is locked", None))
+        self.cmd_check_result_lockscreen.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Expected string in result", None))
+        self.checkBox_screenshot_ignore_if_active_window.setText(QCoreApplication.translate("MainWindow", u"Don't screenshot if QtRecon is the active window", None))
+        self.checkBox_screenshot_jpg.setText(QCoreApplication.translate("MainWindow", u"Convert images from PNG to JPG", None))
+        self.checkBox_screenshot_processes.setText(QCoreApplication.translate("MainWindow", u"Include processes information in a dedicated database", None))
+        self.checkBox_screenshot_ocr.setText(QCoreApplication.translate("MainWindow", u"Include OCR information in a database", None))
+        self.ocr_binary_path.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Path to OCR binary", None))
+        self.radioButton_screenshots_qt.setText(QCoreApplication.translate("MainWindow", u"Native (X11 only)", None))
+        self.radioButton_screenshots_external.setText(QCoreApplication.translate("MainWindow", u"External tool", None))
+        self.number_of_screenshots.setText("")
+        self.button_start_screenshot.setText(QCoreApplication.translate("MainWindow", u"Start", None))
+        self.button_save_screenshot.setText(QCoreApplication.translate("MainWindow", u"Stop, compress and save to final archive", None))
+        self.work.setTabText(self.work.indexOf(self.screenshots), QCoreApplication.translate("MainWindow", u"Screenshots", None))
         self.management.setTabText(self.management.indexOf(self.log_tab), QCoreApplication.translate("MainWindow", u"Logs", None))
         self.button_play.setText("")
         self.button_pause.setText("")

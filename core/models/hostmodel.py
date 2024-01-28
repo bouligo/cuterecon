@@ -1,7 +1,7 @@
-from PySide2.QtCore import QAbstractTableModel, Qt
+from PySide6.QtCore import QAbstractTableModel, Qt
 import ipaddress  # sort by IP
 
-from PySide2.QtGui import QFont, QColor, QIcon
+from PySide6.QtGui import QFont, QColor, QIcon
 
 from core.database import Database
 
@@ -11,7 +11,7 @@ class HostModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self.controller = controller
         self.hosts = []
-        self.headers = ['id', 'OS', 'IP', 'Hostname']
+        self.headers = ['host_id', 'OS', 'IP', 'Hostname']
         # self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'unknown': QIcon("icons/unknown.png")}
         self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'ios': QIcon("icons/ios.png"), 'unknown': QIcon("icons/unknown.png")}
         self.filter = ""
@@ -19,18 +19,18 @@ class HostModel(QAbstractTableModel):
 
     def update_data(self):
         if self.filter_type == 'host':
-            hosts = Database.request("SELECT id, os, ip, hostname, pwned, highlight FROM hosts WHERE ip LIKE '%' || ? || '%' OR hostname LIKE '%' || ? || '%'", (self.filter, self.filter)).fetchall()
+            hosts = Database.request("SELECT id as host_id, os, ip, hostname, pwned, highlight FROM hosts WHERE ip LIKE '%' || ? || '%' OR hostname LIKE '%' || ? || '%'", (self.filter, self.filter)).fetchall()
             self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
         elif self.filter_type == 'port' and '/' in self.filter:
             proto, port = self.filter.split('/')
-            hosts = Database.request("SELECT hosts.* FROM hosts, hosts_ports WHERE hosts.id = hosts_ports.host_id AND hosts_ports.proto = ? AND hosts_ports.port = ?", (proto, port)).fetchall()
+            hosts = Database.request("SELECT id as host_id, os, ip, hostname, pwned, highlight FROM hosts, hosts_ports WHERE hosts.id = hosts_ports.host_id AND hosts_ports.proto = ? AND hosts_ports.port = ?", (proto, port)).fetchall()
             self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
 
         self.layoutChanged.emit()  # https://stackoverflow.com/questions/45359569/how-to-update-qtableview-on-qabstracttablemodel-change
 
     def headerData(self, col, orientation, role):
         # if role == Qt.TextAlignmentRole:
-        #     return Qt.AlignCenter # BUG: RuntimeWarning: libshiboken: Overflow: Value PySide2.QtCore.Qt.AlignmentFlag.AlignCenter exceeds limits of type  [signed] "i" (4bytes).
+        #     return Qt.AlignCenter # BUG: RuntimeWarning: libshiboken: Overflow: Value PySide6.QtCore.Qt.AlignmentFlag.AlignCenter exceeds limits of type  [signed] "i" (4bytes).
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self.headers[col]
         return None
@@ -44,7 +44,7 @@ class HostModel(QAbstractTableModel):
     def itemData(self, index):
         return self.hosts[index.row()]
 
-    def data(self, index, role):
+    def data(self, index, role = Qt.DisplayRole):
         if not index.isValid():
             return None
         elif role == Qt.FontRole:
@@ -165,7 +165,7 @@ class HostModel(QAbstractTableModel):
     def get_all_host_details(self):
         res = []
         for host in self.hosts:
-            res.append(self.get_host_details(host['id']))
+            res.append(self.get_host_details(host['host_id']))
         return res
 
     def delete_host(self, host_id: int):

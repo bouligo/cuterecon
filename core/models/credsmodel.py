@@ -1,4 +1,6 @@
-from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex
+import operator
+
+from PySide6.QtCore import QAbstractTableModel, Qt
 from core.database import Database
 
 
@@ -8,13 +10,15 @@ class CredsModel(QAbstractTableModel):
         self.ui = parent
         self.creds = []
         self.filter = ""
-        self.headers = ['id', 'Hostname', 'Type', 'Domain', 'Username', 'Password'] # Must be the same as column names in db, but exception for host_id
+        self.sort_field = "hosts_creds.id"
+        self.sort_order = "ASC"
+        self.headers = ['host_id', 'id', 'IP', 'Hostname', 'Type', 'Domain', 'Username', 'Password'] # Must be the same as column names in db, but exception for host_id
 
     def update_data(self):
         if self.filter:
-            self.creds = Database.request("SELECT hosts_creds.id, hosts.hostname, hosts_creds.type, hosts_creds.domain, hosts_creds.username, hosts_creds.password FROM hosts, hosts_creds WHERE hosts.id == hosts_creds.host_id AND (hosts.hostname LIKE '%' || ? || '%' OR hosts_creds.domain LIKE '%' || ? || '%' OR hosts_creds.username LIKE '%' || ? || '%' OR hosts_creds.password LIKE '%' || ? || '%') ORDER BY hosts_creds.id ASC", (self.filter, self.filter, self.filter, self.filter)).fetchall()
+            self.creds = Database.request(f"SELECT hosts.id as host_id, hosts_creds.id, hosts.ip, hosts.hostname, hosts_creds.type, hosts_creds.domain, hosts_creds.username, hosts_creds.password FROM hosts, hosts_creds WHERE hosts.id == hosts_creds.host_id AND (hosts.hostname LIKE '%' || ? || '%' OR hosts_creds.domain LIKE '%' || ? || '%' OR hosts_creds.username LIKE '%' || ? || '%' OR hosts_creds.password LIKE '%' || ? || '%') ORDER BY {self.sort_field} {self.sort_order}", (self.filter, self.filter, self.filter, self.filter)).fetchall()
         else:
-            self.creds = Database.request("SELECT hosts_creds.id, hosts.hostname, hosts_creds.type, hosts_creds.domain, hosts_creds.username, hosts_creds.password FROM hosts, hosts_creds WHERE hosts.id = hosts_creds.host_id ORDER BY hosts.id ASC").fetchall()
+            self.creds = Database.request(f"SELECT hosts.id as host_id, hosts_creds.id, hosts.ip, hosts.hostname, hosts_creds.type, hosts_creds.domain, hosts_creds.username, hosts_creds.password FROM hosts, hosts_creds WHERE hosts.id = hosts_creds.host_id ORDER BY {self.sort_field} {self.sort_order}").fetchall()
         self.layoutChanged.emit()  # https://stackoverflow.com/questions/45359569/how-to-update-qtableview-on-qabstracttablemodel-change
 
     def rowCount(self, parent):
@@ -25,6 +29,29 @@ class CredsModel(QAbstractTableModel):
 
     def itemData(self, index):
         return self.creds[index.row()]
+
+    def sort(self, col, order):
+        self.layoutAboutToBeChanged.emit()
+        if col == 2: # Sort by IP address
+            # Fuck you sqlite
+            self.sort_field = f"""CAST(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')-1) AS INTEGER),
+CAST(substr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')-1) AS INTEGER),
+CAST(substr(substr(trim({self.headers[col]}),length(substr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')))+length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')))+length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')-1) AS INTEGER),
+CAST(substr(trim({self.headers[col]}),length(substr(substr(trim({self.headers[col]}),length(substr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')))+length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')))+length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')))+ length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+length(substr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})) ,1, instr(substr(trim({self.headers[col]}),length(substr(trim({self.headers[col]}),1,instr(trim({self.headers[col]}),'.')))+1,length({self.headers[col]})),'.')))+1,length(trim({self.headers[col]}))) AS INTEGER)"""
+        else:
+            self.sort_field = self.headers[col]
+
+        if order == Qt.DescendingOrder:
+            self.sort_order = "DESC"
+        else:
+            self.sort_order = "ASC"
+        self.update_data()
+        self.layoutChanged.emit()
+
+    def headerData(self, col, orientation, role):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self.headers[col]
+        return None
 
     def data(self, index, role):
         if not index.isValid():
@@ -37,11 +64,6 @@ class CredsModel(QAbstractTableModel):
     def filter_credstable(self, search_input: str):
         self.filter = search_input
         self.update_data()
-
-    def headerData(self, col, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.headers[col]
-        return None
 
     def get_creds_for_host(self, host_id: int) -> list:
         return Database.request('select * from hosts_creds where host_id = ?', (host_id, )).fetchall()

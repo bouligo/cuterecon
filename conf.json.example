@@ -549,5 +549,22 @@
                 "New-ItemProperty -Path \"HKLM:\\System\\CurrentControlSet\\Control\\Lsa\" -Name \"DisableRestrictedAdmin\" -Value \"0\" -PropertyType DWORD -Force"
             ]
         ]
+    },
+    "screenshots": {
+        "engine": "qt",
+        "interval" : 15,
+        "dst_folder" : "/home/user/Images/",
+        "work_folder" : "/tmp/",
+        "pixel_threshold_different_images" : 500,
+        "check_locked_screen": true,
+        "check_locked_screen_cmd" : "dbus-send --session --dest=org.freedesktop.ScreenSaver --type=method_call --print-reply --reply-timeout=20000 /org/freedesktop/ScreenSaver org.freedesktop.ScreenSaver.GetActive",
+        "check_locked_screen_cmd_result" : "boolean true",
+        "screenshot_cmd" : "/usr/bin/spectacle -nfb -o %%%OUTPUT%%%",
+        "ignore_if_active_window": true,
+        "convert_png_to_jpg" : true,
+        "include_processes" : true,
+        "include_ocr" : false,
+        "processes_blacklist" : ["systemd", "kthreadd", "dbus-send", "Xorg", "sddm-helper", "(sd-pam)", "startplasma-x11", "dbus-daemon", "xdg-desktop-portal", "xdg-document-portal", "xdg-permission-store", "fusermount3", "ksmserver", "kded5", "kwin_x11", "kglobalaccel5", "dconf-service", "plasmashell", "kactivitymanagerd", "gmenudbusmenuproxy", "polkit-kde-authentication-agent-1", "at-spi-bus-launcher", "plasma-browser-integration-host", "Socket Process", "Privileged Cont", "WebExtensions", "Utility Process", "plasma-browser-integration-host", "zsh", "script", "Isolated Web Co", "smbnotifier", "kioslave5", "vim", "agent", "yakuake", "kscreen_backend_launcher", "xdg-desktop-portal-kde", "org_kde_powerdevil", "pulseaudio", "kaccess", "pipewire", "keepassxc", "DiscoverNotifier", "kiod5", "chrome_crashpad_handler", "Web Content", "kio-fuse", "dolphin", "obexd", "wireplumber", "xembedsniproxy", "gsettings-helper", "chromium", "signal-desktop", "Discord", "electron", "fsnotifier", "RDD Process"],
+        "processes_ppid_blacklist" : [1, 2]
     }
 }

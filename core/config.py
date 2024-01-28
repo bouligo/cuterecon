@@ -2,7 +2,7 @@ import json
 import os
 import sys
 
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 
 class Config():

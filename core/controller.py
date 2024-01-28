@@ -1,13 +1,14 @@
 import re
 import sys
 import os
+from datetime import datetime
 
-from PySide2.QtCore import QProcess, QModelIndex, QTimer
+from PySide6.QtCore import QProcess, QModelIndex, QTimer
 import html2text
 import ipaddress  # sort by IP
 
-from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon, QApplication
 
 from core.config import Config
 from core.models.credsmodel import CredsModel
@@ -17,16 +18,20 @@ from core.database import Database
 from core.models.hostmodel import HostModel
 from core.models.logmodel import LogModel
 from core.models.jobmodel import JobModel
+from utils.Screenshot import Screenshot, get_dir_size
 
 
 class Controller:
-    APPLICATION_VERSION = "1.4"
+    APPLICATION_VERSION = "1.5"
     autosave_timer = QTimer()
+    progression_bar_timer = QTimer()
+    screenshot_mgr = None
 
     def __init__(self, ui):
         self.ui = ui
         self.view = View(ui, self)
 
+        self.progression_bar_timer.timeout.connect(self.screenshot_timer)
         self.autosave_timer.timeout.connect(self.autosave)
         self.autosave_timer.start(Config.get()['user_prefs']['autosave_interval'])
 
@@ -148,14 +153,24 @@ class Controller:
             return ""
 
         if host:
-            host_id = self.host_model.itemData(host)['id']
+            host_id = self.host_model.itemData(host)['host_id']
         elif self.host_model.itemData(self.ui.ui.host_list.currentIndex()):
-            host_id =self.host_model.itemData(self.ui.ui.host_list.currentIndex())['id']
+            host_id =self.host_model.itemData(self.ui.ui.host_list.currentIndex())['host_id']
 
         return self.host_model.get_host_details(host_id)
 
     def get_selected_port(self) -> str:
         return self.view.app_tabs['Ports'].item(self.view.app_tabs['Ports'].currentRow(), 2).text()
+
+    def switch_to_host(self, host_id: int):
+        self.host_model.filter_hostlist("host", "")
+        self.ui.ui.host_list_filter.setText("")
+        for i, item in enumerate(self.host_model.hosts):
+            if item['host_id'] == host_id:
+                self.ui.ui.host_list.selectRow(i)
+                self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
+                self.ui.ui.work.setCurrentIndex(0)
+                return
 
     def set_host_pwned(self, index: QModelIndex):
         host = self.get_selected_host(index)
@@ -172,14 +187,14 @@ class Controller:
     def change_host_hostname(self, index: QModelIndex, new_hostname: str):
         host = self.get_selected_host(index)
         self.host_model.change_host_hostname(host['id'], new_hostname)
-        self.ui.ui.host_list.clearSelection()
+        # self.ui.ui.host_list.clearSelection()
         self.hosts_for_port_model.update_data()
         self.creds_model.update_data()
 
     def change_host_os(self, index: QModelIndex, new_os: str):
         host = self.get_selected_host(index)
         self.host_model.change_host_os(host['id'], new_os.lower())
-        self.ui.ui.host_list.clearSelection()
+        # self.ui.ui.host_list.clearSelection()
         self.hosts_for_port_model.update_data()
         self.creds_model.update_data()
 
@@ -349,6 +364,7 @@ class Controller:
 
             for i in range(len(program['args'])):
                 args[i] = args[i].replace("%%%IP%%%", host_dst['ip'])
+                args[i] = args[i].replace("%%%HOSTNAME%%%", host_dst['ip'])
                 args[i] = args[i].replace("%%%PORT%%%", port_dst)
                 if replace_command_line_with_creds:
                     args[i] = args[i].replace(f"%%%DOMAIN%%%", domain)
@@ -415,6 +431,100 @@ class Controller:
         success = job.startDetached(command, args)
         if not success:
             self.log("CRITICAL", "Cannot launch program " + command)
+
+    def start_or_pause_screenshotting(self, engine: bool, interval: int, dst_folder: str, work_folder: str, pixel_threshold_different_images: int, check_locked_screen_cmd: str, check_locked_screen_cmd_result: str, screenshot_cmd: str, check_locked_screen: bool, ignore_if_active_window: bool, convert_png_to_jpg: bool, include_processes: bool, include_ocr: bool):
+        if engine:
+            engine = "qt"
+        else:
+            engine = "external"
+
+        if engine == "external" and not screenshot_cmd:
+            QMessageBox.critical(None, "Error", "Screenshot command line is required !")
+            return
+        if not work_folder:
+            QMessageBox.critical(None, "Error", "Temporary work folder is required !")
+            return
+        if not dst_folder:
+            QMessageBox.critical(None, "Error", "Final destination folder is required !")
+            return
+        if check_locked_screen and (not check_locked_screen_cmd or not check_locked_screen_cmd_result):
+            QMessageBox.critical(None, "Error", "Please specify command to check if the screen is locked, and the expected output.")
+            return
+
+        if self.screenshot_mgr is None:
+            processes_blacklist = Config.get()['screenshots']['processes_blacklist'] if 'screenshots' in Config.get().keys() and 'processes_blacklist' in Config.get()['screenshots'].keys() else None
+            processes_ppid_blacklist = Config.get()['screenshots']['processes_ppid_blacklist'] if 'screenshots' in Config.get().keys() and 'processes_ppid_blacklist' in Config.get()['screenshots'].keys() else None
+            self.screenshot_mgr = Screenshot(engine=engine,
+                                             dst_folder=dst_folder,
+                                             work_folder=work_folder,
+                                             pixel_threshold_different_images=pixel_threshold_different_images,
+                                             check_locked_screen_cmd=check_locked_screen_cmd,
+                                             check_locked_screen_cmd_result=check_locked_screen_cmd_result,
+                                             screenshot_cmd=screenshot_cmd,
+                                             check_locked_screen=check_locked_screen,
+                                             ignore_if_active_window=ignore_if_active_window,
+                                             convert_png_to_jpg=convert_png_to_jpg,
+                                             include_processes=include_processes,
+                                             include_ocr=include_ocr,
+                                             processes_blacklist=processes_blacklist,
+                                             processes_ppid_blacklist=processes_ppid_blacklist)
+            self.ui.ui.button_save_screenshot.setEnabled(True)
+            self.ui.ui.number_of_screenshots.setText("")
+            self.ui.ui.progressBar.setMaximum(interval*1000)
+
+        if self.progression_bar_timer.isActive():
+            self.progression_bar_timer.stop()
+            self.ui.ui.button_start_screenshot.setText("Resume")
+        else:
+            self.progression_bar_timer.start(interval * 10)  # every tick is 1%
+            self.ui.ui.button_start_screenshot.setText("Pause")
+
+    def screenshot_timer(self):
+        if self.ui.ui.progressBar.value() + self.progression_bar_timer.interval() >= self.ui.ui.progressBar.maximum():
+            self.ui.ui.progressBar.setValue(self.ui.ui.progressBar.maximum())
+
+            if not QApplication.activeWindow() or not self.screenshot_mgr.ignore_if_active_window:
+                try:
+                    self.ui.ui.progressBar.setMaximum(0)
+                    self.screenshot_mgr.take_screenshot()
+                    self.ui.ui.number_of_screenshots.setText(f"{str(self.screenshot_mgr.nb_of_screenshots)} screenshots taken ({'{:.2f}'.format(get_dir_size(self.screenshot_mgr.folder) / 1024 / 1024)} Mo) in {int((datetime.now() - self.screenshot_mgr.begin_datetime).seconds / 60)} minutes!")
+                    self.ui.statusBar().showMessage('Screenshot taken !', 2000)
+                except Exception as e:
+                    print(e)
+                    self.send_desktop_notification("Failed to take screenshot", f"QtRecon will retry in {int(self.progression_bar_timer.interval()/10)} seconds")
+
+                self.ui.ui.progressBar.setMaximum(self.progression_bar_timer.interval()*100)
+
+            self.ui.ui.progressBar.reset()
+        else:
+            self.ui.ui.progressBar.setValue(self.ui.ui.progressBar.value() + self.progression_bar_timer.interval())
+
+    def stop_screenshotting(self):
+        self.progression_bar_timer.stop()
+        self.ui.ui.button_start_screenshot.setText("Start")
+        self.ui.ui.button_save_screenshot.setEnabled(False)
+        self.ui.ui.progressBar.setValue(0)
+
+        if self.screenshot_mgr.nb_of_screenshots:
+            self.ui.ui.number_of_screenshots.setText("Compressing archive ...")
+            self.ui.ui.progressBar.setMaximum(self.screenshot_mgr.nb_of_screenshots)
+
+            try:
+                for output in self.screenshot_mgr.save_archive():
+                    self.ui.ui.progressBar.setValue(self.ui.ui.progressBar.value() + 1)
+                    if 'stdout' in output.keys():
+                        self.ui.ui.number_of_screenshots.setText(f"Compressing {output['stdout']}")
+                    if 'stderr' in output.keys():
+                        self.send_desktop_notification('Error while processing screenshot file', output['stderr'])
+            except Exception as e:
+                QMessageBox.critical(None, 'Errors while creating archive file', 'An error occured when compressing screenshots into an archive file : ' + str(e))
+
+            folder_size = get_dir_size(self.screenshot_mgr.folder)
+            archive_size = int(os.stat(self.screenshot_mgr.archive).st_size)
+            self.ui.ui.number_of_screenshots.setText(f"Created archive {self.screenshot_mgr.archive} with {'{:.2f}'.format(archive_size*100/folder_size)}% of original size ({str(self.screenshot_mgr.nb_of_screenshots)} screenshots, {'{:.2f}'.format(archive_size / 1024 / 1024)} Mo instead of {'{:.2f}'.format(folder_size / 1024 / 1024)} Mo).")
+
+        del self.screenshot_mgr
+        self.screenshot_mgr = None
 
     def send_desktop_notification(self, title: str, message: str):
         system_icon = QSystemTrayIcon()

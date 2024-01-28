@@ -1,4 +1,4 @@
-from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex
+from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 from datetime import datetime
 from core.database import Database
 

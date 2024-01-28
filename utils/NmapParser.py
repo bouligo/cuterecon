@@ -25,7 +25,7 @@ class NmapParser:
                 mac = ""
 
             try:
-                hostname = host.find('./*/hostname/[@type="PTR"]').attrib['name']
+                hostname = host.find('./*/hostname').attrib['name']
             except AttributeError:
                 hostname = ""
 
@@ -34,7 +34,8 @@ class NmapParser:
             except AttributeError:
                 os = "unknown"
 
-            hosts[ip] = {'ip': ip, 'hostname': hostname, 'mac': mac, 'os': os, 'ports': {'tcp': {},'udp': {}}}
+            if not ip in hosts.keys():
+                hosts[ip] = {'ip': ip, 'hostname': hostname, 'mac': mac, 'os': os, 'ports': {'tcp': {},'udp': {}}}
 
             # Get open ports
             for port in host.iter('port'):
@@ -52,7 +53,10 @@ class NmapParser:
                         if 'extrainfo' in service.attrib.keys():
                             description += f" ({service.attrib['extrainfo']})"
 
+                    # if root.attrib['scanner'] == 'nmap':
                     hosts[ip]['ports'][port.attrib['protocol']].update({port.attrib['portid']:{'status':'open', 'description': description}})
+                    # if root.attrib['scanner'] == 'masscan': # In masscan, there is one line per port
+                    #     hosts[ip]['ports'][port.attrib['protocol']][port.attrib['portid']] = {'status':'open', 'description': description}
 
         return hosts
 

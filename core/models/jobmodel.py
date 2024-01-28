@@ -1,6 +1,6 @@
 import os
 
-from PySide2.QtCore import QAbstractTableModel, Qt, QProcess, QModelIndex, QProcessEnvironment
+from PySide6.QtCore import QAbstractTableModel, Qt, QProcess, QModelIndex, QProcessEnvironment
 from datetime import datetime
 import threading
 from core.database import Database

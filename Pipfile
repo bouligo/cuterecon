@@ -4,8 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pyside2 = "*"
 ansi2html = "*"
 html2text = "*"
 netifaces = "*"
-shiboken2 = "*"
+pillow = "*"
+psutil = "*"
+pyside6 = "*"

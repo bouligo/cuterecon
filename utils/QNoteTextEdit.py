@@ -1,6 +1,6 @@
-from PySide2.QtCore import QByteArray, QBuffer, QIODevice
-from PySide2.QtGui import QImage
-from PySide2.QtWidgets import QTextEdit
+from PySide6.QtCore import QByteArray, QBuffer, QIODevice
+from PySide6.QtGui import QImage
+from PySide6.QtWidgets import QTextEdit
 
 
 class QNoteTextEdit(QTextEdit):

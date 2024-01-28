@@ -1,4 +1,4 @@
-from PySide2.QtCore import QProcess
+from PySide6.QtCore import QProcess
 from ansi2html import Ansi2HTMLConverter
 import os
 import signal

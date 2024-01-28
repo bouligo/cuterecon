@@ -33,6 +33,9 @@ Most of the customization resides in the *user_binaries*, *port_associations*, *
 - *ports_associations* : tell which program can be used on which network port
 - *autorun* : specifies which program on which port should be launched automatically upon discovery
 - *user_prefs* : options should be self-explanatory
+- "user_variables" : variables to be replaced automatically in commands
+- "snippets" : pieces of codes often used
+- "screenshots" : settings for the screenshot module
 
 ### core_binaries
 
@@ -117,6 +120,67 @@ The autorun section defines programs to be run automatically when ports are foun
     }
 ```
 
+### user_variables
+
+Variables to be replaced automatically in commands. In this example :
+
+```json
+    "user_variables": {
+        "XFREERDP_KEYBOARD": "0x0000040C"
+    },
+```
+
+every instance of %%%XFREERDP_KEYBOARD%%% in a command line will be replaced with the corresponding value 0x0000040C. Values can be changed at runtime through the GUI (Edit -> Edit custom variables)
+
+### snippets
+
+This section contains all pieces of code often used for quick reference. It can be reverse shell, cheatsheets, whatever . Syntax is as follow :
+
+```json
+    "snippets": {
+        "Title of tab":
+        [
+            "Headline 1",
+            [
+                "<code content>",
+                "<code content>"
+            ],
+            "Headline 2",
+            [
+                "Sub-headline",
+                [
+                    "<code content>",
+                    "<code content>"
+                ],
+            ],
+...
+```
+
+%%%LHOST%%% and %%%LPORT%%% are special variables here, replaced with what you specified in user_prefs->preferred_interfaces or user_prefs->preferred_lport.
+
+### screenshots
+
+The screenshot module helps when you need a screenshot you forgot to take while working. It will rely on an external tool to create a snapshot every X seconds, and compress everything in an archive :
+
+ - engine : can be the native one "qt" (recommanded), or an "external" tool 
+ - interval : Seconds between screenshots
+ - dst_folder : Final destination folder where all screenshots taken are compressed into a unique archive
+ - work_folder : Temporary work folder where all screenshots are taken and stored before creating the final compressed archive
+ - pixel_threshold_different_images : number of different pixels from previous screenshot required to take another screenshot. It prevents taking multiple images from a screen without activity 
+ - check_locked_screen : Boolean, if true, qtrecon will check if the screen is locked before taking screenshots
+ - check_locked_screen_cmd : Command line to check if the screen is lockec
+ - check_locked_screen_cmd_result : output from check_locked_screen_cmd that shows a locked screen
+ - screenshot_cmd : command line to create a new screenshot, with %%%OUTPUT%%% as the output file
+ - ignore_if_active_window : boolean, if true, qtrecon will not take a screenshot if it is the current active window
+ - convert_png_to_jpg : if the screenshot_cmd produces a png image, this option will convert it to jpg to reduce its size
+ - include_processes : create a dedicated sqlite database which includes all running process when the screenshot is taken.
+ - include_ocr : Not implemented yet
+ - processes_blacklist : This option is not visible from the GUI, it filters out all processes in the dedicated database
+ - processes_ppid_blacklist : This option is not visible from the GUI, it filters out all processes which have specified ppid
+
+# Credentials
+
+You can add credentials for a specific host, and depending on its type (password or hash), it can be used to integrate your command line at runtime. It you launch a command with %%%PASSWORD%%% or %%%HASH%%%, and have valid credentials, QtRecon will ask if they must be used.
 
 # Privileged scans
 
@@ -125,6 +189,16 @@ The final XML file created by root must be readable by your user, meaning that a
 # Changelog & Todos
 
 ## Changelog
+
+v1.5:
+- Changed the Nmap parser to slightly better capture hostnames of hosts
+- Remembers current open folder when importing .xml or opening project files
+- sorting enabled in the credentials tab 
+- IP is now display in the credentials view
+- %%%HOSTNAME%%% can be dynamically replaced
+- New 'Go to Host view' feature, to get redirected to the nmap results from the service tab or password tab
+- New screenshot module, to automatically screenshot your screen every X seconds (needs testing)
+- Migrated to pyside6 (needs even more testing, but should be fine)
 
 v1.4:
 - Fixed a bug where the service tab wasn't updated properly
@@ -151,32 +225,15 @@ v1.1:
 
 ## Todo list
 
-- [x] Escaped chars in snippet tab
-- [x] Configuration template
-- [x] Save-as and Save in menu
-- [x] Option to autosave
-- [x] First argument with the database to open
-- [x] Autorun any à fixer
-- [x] Snippets : only use list of list, where the first element is the title
-- [x] Fixed font for snippets
-- [ ] Save location when loading new database or importing nmap scans
-- [ ] Remove sharename variable & unify variables ? 
+- [ ] Log changes of IP
 - [ ] Option to force edit command before an interactive run
-- [ ] Save configuration from GUI
 - [ ] Configure tools and configuration from GUI
-- [ ] staged nmap
-- [x] Warning when exiting
-- [ ] Service to Host switch
 - [ ] better check of conf (port association and autorun, to user_binaries, and check all mandatory fields are there)
-- [ ] Add confirmation when data is about to be erased (same IP)
-- [x] doc about config.cfg
-- [ ] sort data in models
+- [ ] Add confirmation when data is about to be erased (same IP) ?
 - [ ] search for default icons in fs ?
 - [ ] notes with rich text ? Integrated cherrytree or equivalent ?
-- [ ] Upgrade to PySide6
 
 ## bugs
 
-- [x] File -> new doesn't work
 - [ ] Cannot stop running privileged nmap as it was launched under pkexec
-- [ ] Copy/paste doesn't work under wayland
+- [ ] Copy/paste doesn't work under wayland ?

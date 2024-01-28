@@ -1,9 +1,10 @@
 import re
 
-from PySide2.QtGui import QCursor, QIcon, QTextCursor
-from PySide2.QtWidgets import QApplication, QFileDialog, QTabBar, QTableWidgetItem, QMenu, QTextEdit, QTableWidget, \
-    QAbstractItemView, QMessageBox, QInputDialog, QDialog, QLabel, QLineEdit, QHeaderView, QWidget, QComboBox
-from PySide2.QtCore import QPoint, QModelIndex, Qt
+from PySide6.QtGui import QCursor, QIcon, QTextCursor
+from PySide6.QtWidgets import QApplication, QFileDialog, QTabBar, QTableWidgetItem, QMenu, QTextEdit, QTableWidget, \
+    QAbstractItemView, QMessageBox, QInputDialog, QDialog, QLabel, QLineEdit, QHeaderView, QWidget, QComboBox, \
+    QTableView
+from PySide6.QtCore import QPoint, QModelIndex, Qt
 
 import ipaddress  # check input for IP
 import netifaces # Get ifaces ip addr
@@ -38,6 +39,7 @@ class View:
         self.ui.ui.host_list.setColumnHidden(0, True)
         self.ui.ui.hosts_for_port_table.setColumnHidden(0, True)
         self.ui.ui.creds_table.setColumnHidden(0, True)
+        self.ui.ui.creds_table.setColumnHidden(1, True)
         self.ui.ui.log_table.setColumnHidden(0, True)
         self.ui.ui.job_table.setColumnHidden(0, True)
         self.ui.ui.job_table.setColumnHidden(1, True)
@@ -49,6 +51,30 @@ class View:
         self.ui.ui.actionAutosave_database_every_5_mins.setChecked(Config.get()['user_prefs']['autosave'])
         self.ui.ui.actionEnable_automatic_tools_on_import.setChecked(Config.get()['user_prefs']['enable_autorun_on_xml_import'])
         self.ui.ui.host_list.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        if 'screenshots' in Config.get().keys():
+            if 'engine' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['engine'] == "external":
+                self.ui.ui.radioButton_screenshots_external.toggle()
+            if 'interval' in Config.get()['screenshots'].keys():
+                self.ui.ui.spinBox_screenshots_interval.setValue(Config.get()['screenshots']['interval'])
+                self.ui.ui.progressBar.setMaximum(Config.get()['screenshots']['interval'])
+            if 'dst_folder' in Config.get()['screenshots'].keys(): self.ui.ui.screenshot_dst_folder.setText(Config.get()['screenshots']['dst_folder'])
+            if 'work_folder' in Config.get()['screenshots'].keys(): self.ui.ui.screenshot_work_folder.setText(Config.get()['screenshots']['work_folder'])
+            if 'pixel_threshold_different_images' in Config.get()['screenshots'].keys(): self.ui.ui.pixel_slider.setValue(Config.get()['screenshots']['pixel_threshold_different_images'])
+            if 'check_locked_screen_cmd' in Config.get()['screenshots'].keys(): self.ui.ui.cmd_check_lockscreen.setText(Config.get()['screenshots']['check_locked_screen_cmd'])
+            if 'check_locked_screen_cmd_result' in Config.get()['screenshots'].keys(): self.ui.ui.cmd_check_result_lockscreen.setText(Config.get()['screenshots']['check_locked_screen_cmd_result'])
+            if 'screenshot_cmd' in Config.get()['screenshots'].keys(): self.ui.ui.screenshot_cmd.setText(Config.get()['screenshots']['screenshot_cmd'])
+            if 'check_locked_screen' in Config.get()['screenshots'].keys():
+                if Config.get()['screenshots']['check_locked_screen']:
+                    self.ui.ui.checkBox_screenshot_lockscreen.setCheckState(Qt.CheckState.Checked)
+                else:
+                    self.ui.ui.cmd_check_lockscreen.setEnabled(False)
+                    self.ui.ui.cmd_check_result_lockscreen.setEnabled(False)
+            if 'ignore_if_active_window' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['ignore_if_active_window']: self.ui.ui.checkBox_screenshot_ignore_if_active_window.setCheckState(Qt.CheckState.Checked)
+            if 'convert_png_to_jpg' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['convert_png_to_jpg']: self.ui.ui.checkBox_screenshot_jpg.setCheckState(Qt.CheckState.Checked)
+            if 'include_processes' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['include_processes']: self.ui.ui.checkBox_screenshot_processes.setCheckState(Qt.CheckState.Checked)
+            if 'include_ocr' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['include_ocr']: self.ui.ui.checkBox_screenshot_ocr.setCheckState(Qt.CheckState.Checked)
+
         self.reset_ui_snippets()
 
     def reset_ui_snippets(self):
@@ -147,6 +173,7 @@ class View:
         self.ui.ui.creds_table.customContextMenuRequested.connect(self.right_click_in_creds_table)
         self.ui.ui.creds_table_copy_selection_to_clipboard.clicked.connect(lambda: self.copy_selectedIndexes_to_clipboard(self.ui.ui.creds_table.selectedIndexes()))
         self.ui.ui.creds_table_copy_all_to_clipboard.clicked.connect(self.creds_table_copy_all_to_clipboard)
+        self.ui.ui.creds_table_view_in_host_tab.clicked.connect(lambda: self.switch_to_host_tab(self.ui.ui.creds_table))
         self.ui.ui.actionEnable_automatic_tools.triggered.connect(lambda checked: Config.set(["user_prefs", "enable_autorun"], checked))
         self.ui.ui.actionEnable_automatic_tools_on_import.triggered.connect(lambda checked: Config.set(["user_prefs", "enable_autorun_on_xml_import"], checked))
         self.ui.ui.reset_lhost_lport.clicked.connect(self.reset_ui_snippets)
@@ -155,15 +182,18 @@ class View:
         self.ui.ui.escaped_chars.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.urlencoded_chars.textEdited.connect(self.setup_ui_snippets_body)
         self.ui.ui.port_table.itemSelectionChanged.connect(self.change_filter_hosts_for_port)
+        self.ui.ui.machine_list_view_in_host_tab.clicked.connect(lambda: self.switch_to_host_tab(self.ui.ui.hosts_for_port_table))
         self.ui.ui.machine_list_copy_selection_to_clipboard.clicked.connect(lambda: self.copy_selectedIndexes_to_clipboard(self.ui.ui.hosts_for_port_table.selectedIndexes()))
         self.ui.ui.machine_list_copy_all_to_clipboard.clicked.connect(self.machine_list_copy_all_to_clipboard)
         self.ui.ui.hosts_for_port_table.customContextMenuRequested.connect(self.right_click_in_hosts_for_port_table)
+        self.ui.ui.button_start_screenshot.clicked.connect(self.button_start_screenshot_clicked)
+        self.ui.ui.button_save_screenshot.clicked.connect(self.button_save_screenshots_clicked)
 
     def about(self):
         about_dialog = About()
         about_dialog.setWindowTitle("About this program")
         about_dialog.ui.text.setText(f"<h1>QtRecon {self.controller.APPLICATION_VERSION}</h1><p>2023, licenced under Creative Commons <i>CC-BY</i></p><p>Thanks to my friends, for all the advices they gave me and the beta-testing while developping this thing</br ></p><a href='https://github.com/bouligo/cuterecon/'>https://github.com/bouligo/cuterecon/</a>")
-        about_dialog.ui.image.setPixmap("icons/icon.ico")
+        # about_dialog.ui.image.setPixmap("icons/icon.ico")  # Integrated in UI now
         about_dialog.ui.button.clicked.connect(about_dialog.close)
         about_dialog.exec()
 
@@ -199,6 +229,25 @@ class View:
 
         for variable in dialog_variables:
             Config.set(["user_variables", variable], dialog_variables[variable].text())
+
+    def button_start_screenshot_clicked(self):
+        self.controller.start_or_pause_screenshotting(
+            self.ui.ui.radioButton_screenshots_qt.isChecked(),
+            self.ui.ui.spinBox_screenshots_interval.value(),
+            self.ui.ui.screenshot_dst_folder.text(),
+            self.ui.ui.screenshot_work_folder.text(),
+            self.ui.ui.pixel_slider.value(),
+            self.ui.ui.cmd_check_lockscreen.text(),
+            self.ui.ui.cmd_check_result_lockscreen.text(),
+            self.ui.ui.screenshot_cmd.text(),
+            self.ui.ui.checkBox_screenshot_lockscreen.isChecked(),
+            self.ui.ui.checkBox_screenshot_ignore_if_active_window.isChecked(),
+            self.ui.ui.checkBox_screenshot_jpg.isChecked(),
+            self.ui.ui.checkBox_screenshot_processes.isChecked(),
+            self.ui.ui.checkBox_screenshot_ocr.isChecked())
+
+    def button_save_screenshots_clicked(self):
+        self.controller.stop_screenshotting()
 
     def select_credentials_dialog(self, credentials: list) -> (str, str, str, str):
         select_credentials_dialog = Credentials_dialog()
@@ -267,8 +316,12 @@ class View:
     def copy_ip_in_clipboard_from_hostlist(self, index: QModelIndex):
         host = self.controller.get_selected_host(index)
         clipboard = QApplication.clipboard()
-        clipboard.setText(host['ip'])
-        self.ui.statusBar().showMessage('IP copied to clipboard !', 5000)
+        if index.column() == 3:
+            clipboard.setText(host['hostname'])
+            self.ui.statusBar().showMessage('Hostname copied to clipboard !', 5000)
+        else:
+            clipboard.setText(host['ip'])
+            self.ui.statusBar().showMessage('IP copied to clipboard !', 5000)
 
 
     def right_click_in_host_table(self, qpoint: QPoint):
@@ -289,7 +342,7 @@ class View:
 
         color_menu_dict['None'] = set_color.addAction('None')
         set_color.addSeparator()
-        # list of colors from doc: https://doc.qt.io/qtforpython-5/PySide2/QtCore/Qt.html#PySide2.QtCore.PySide2.QtCore.Qt.GlobalColor
+        # list of colors from doc: https://doc.qt.io/qtforpython-5/PySide6/QtCore/Qt.html#PySide6.QtCore.PySide6.QtCore.Qt.GlobalColor
         for color in ["white", "red", "green", "cyan", "magenta", "yellow", "darkRed", "darkGreen", "blue", "darkBlue", "darkCyan", "darkMagenta", "darkYellow", "gray", "darkGray", "lightGray", "black"]:
             color_menu_dict[color] = set_color.addAction(color)
 
@@ -320,19 +373,19 @@ class View:
             new_hostname, confirmed = QInputDialog.getText(None, "Set hostname", "Set the hostname to :", text = host['hostname'])
             if confirmed:
                 self.controller.change_host_hostname(item, new_hostname)
-                self.close_right_panel_tabs()
+                # self.close_right_panel_tabs()
         elif action == set_os_action:
             new_os, confirmed = QInputDialog.getItem(None, "Set Operating System", "Set the OS to :", ["Windows", "Linux", "IOS", "Unknown"], editable=False)
             if confirmed:
                 self.controller.change_host_os(item, new_os)
-                self.close_right_panel_tabs()
+                # self.close_right_panel_tabs()
         elif action == set_pwned:
             self.controller.set_host_pwned(item)
         elif action in color_menu_dict.values():
             if action.text() == 'None': # 'd better not trust this ? Use the key from color_menu_dict instead ?
                 self.controller.set_host_highlight_color(item, "")
             else:
-                 self.controller.set_host_highlight_color(item, action.text())
+                self.controller.set_host_highlight_color(item, action.text())
         elif action == autorun_action:
             self.controller.autorun([host['id']])
 
@@ -550,7 +603,7 @@ class View:
 
 
     def open_db(self):
-        filename, _ = QFileDialog.getOpenFileName(caption='Restore saved session', dir='.', filter='*.sqlite')
+        filename, _ = QFileDialog.getOpenFileName(caption='Restore saved session', filter='*.sqlite')
         if filename:
             self.controller.open_db(filename)
 
@@ -561,14 +614,14 @@ class View:
             self.controller.save_db()
 
     def save_as_db(self):
-        filename, _ = QFileDialog.getSaveFileName(caption='Save current session', dir='.', filter='*.sqlite')
+        filename, _ = QFileDialog.getSaveFileName(caption='Save current session', filter='*.sqlite')
         if filename:
             if not filename.endswith('.sqlite'):
                 filename += '.sqlite'
             self.controller.save_db(filename)
 
     def dialog_import_xml(self):
-        filename, _ = QFileDialog.getOpenFileName(caption='Import nmap XML output', dir='.', filter='*.xml')
+        filename, _ = QFileDialog.getOpenFileName(caption='Import nmap XML output', filter='*.xml')
         if filename:
             self.controller.log('INFO', f"Importing Nmap results from {filename}")
             new_hosts = self.controller.parse_nmap_data('xml', filename)
@@ -803,3 +856,14 @@ class View:
     def creds_table_copy_all_to_clipboard(self):
         self.ui.ui.creds_table.selectAll()
         self.copy_selectedIndexes_to_clipboard(self.ui.ui.creds_table.selectedIndexes())
+
+    def switch_to_host_tab(self, tableview: QTableView):
+        selectedRows = set([i.row() for i in tableview.selectedIndexes()])
+        if len(selectedRows) > 1:
+            QMessageBox.warning(None, "Error", "Please select only one host at a time.")
+            return
+        if len(selectedRows) == 0:
+            QMessageBox.warning(None, "Error", "Please select a host to view it in the Hosts tab.")
+            return
+
+        self.controller.switch_to_host(tableview.model().itemData(tableview.selectedIndexes()[0])['host_id'])
