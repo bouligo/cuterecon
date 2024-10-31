@@ -88,7 +88,7 @@ class NmapParser:
 
         hosts = dict()
         for host_scan in alive_hosts:
-            ip = re.findall('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', host_scan.split('\n')[0])[0]
+            ip = re.findall(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', host_scan.split('\n')[0])[0]
             hosts[ip] = '\n'.join(host_scan.split('\n')[1:])
 
         return hosts

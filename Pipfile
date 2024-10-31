@@ -10,3 +10,5 @@ netifaces = "*"
 pillow = "*"
 psutil = "*"
 pyside6 = "*"
+
+[dev-packages]

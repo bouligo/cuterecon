@@ -10,6 +10,11 @@ class Config():
     config_template_filename = "conf.json.example"
     config_filename = "conf.json"
     default_configuration_loaded = False
+    default_configuration = {  # Contains default options that might be missing from existing user configurations
+        'user_prefs' :  {'monospaced_fonts': 'Hack, DejaVu Sans Mono, Droid Sans Mono, Courier, Monospace Regular'},
+        'screenshots': {"engine": "qt", "interval" : 15, "dst_folder" : "/home/user/Images/", "work_folder" : "/tmp/", "pixel_threshold_different_images" : 500, "check_locked_screen": True, "check_locked_screen_cmd" : "dbus-send --session --dest=org.freedesktop.ScreenSaver --type=method_call --print-reply --reply-timeout=20000 /org/freedesktop/ScreenSaver org.freedesktop.ScreenSaver.GetActive", "check_locked_screen_cmd_result" : "boolean true", "screenshot_cmd" : "/usr/bin/spectacle -nfb -o %%%OUTPUT%%%", "ignore_if_active_window": True, "convert_png_to_jpg" : True, "include_processes" : True, "include_ocr" : False, "processes_blacklist" : ["systemd", "kthreadd", "dbus-send", "Xorg", "sddm-helper", "(sd-pam)", "startplasma-x11", "dbus-daemon", "xdg-desktop-portal", "xdg-document-portal", "xdg-permission-store", "fusermount3", "ksmserver", "kded5", "kwin_x11", "kglobalaccel5", "dconf-service", "plasmashell", "kactivitymanagerd", "gmenudbusmenuproxy", "polkit-kde-authentication-agent-1", "at-spi-bus-launcher", "plasma-browser-integration-host", "Socket Process", "Privileged Cont", "WebExtensions", "Utility Process", "plasma-browser-integration-host", "zsh", "script", "Isolated Web Co", "smbnotifier", "kioslave5", "vim", "agent", "yakuake", "kscreen_backend_launcher", "xdg-desktop-portal-kde", "org_kde_powerdevil", "pulseaudio", "kaccess", "pipewire", "keepassxc", "DiscoverNotifier", "kiod5", "chrome_crashpad_handler", "Web Content", "kio-fuse", "dolphin", "obexd", "wireplumber", "xembedsniproxy", "gsettings-helper", "chromium", "signal-desktop", "Discord", "electron", "fsnotifier", "RDD Process"], "processes_ppid_blacklist" : [1, 2]},
+        'nmap_options': {'ports': "T:-,U:53,161,631", 'type': "-sS", 'speed': "-T3", 'additional_args': "-v --min-rate 500", 'skip_host_discovery': False, 'version_probing': True, 'default_scripts': True, 'os_detection': True, 'tcp_and_udp': True}
+    }
     conf_structure = {
         "paths": {
             "nmap_output_dir": str
@@ -103,7 +108,10 @@ class Config():
                     print(f"Work folder {Config.config['paths'][path]} already exists as a file on this filesystem. Delete it or specify another path in the configuration.")
                     sys.exit(5)
             else:
-                os.mkdir(Config.config['paths'][path])
+                try:
+                    os.mkdir(Config.config['paths'][path])
+                except FileExistsError:
+                    pass
 
     @staticmethod
     def check_binaries() -> dict:
@@ -117,9 +125,18 @@ class Config():
         return ret
 
     @staticmethod
-    def get() -> dict:
+    def get() -> dict:  # Todo: add default values when not specified in the loaded configuration
         if Config.config is None:
             Config.load_config()
+
+        for first_level_key in Config.default_configuration:
+            if first_level_key not in Config.config.keys():
+                Config.config[first_level_key] = Config.default_configuration[first_level_key]
+            else:
+                for key in Config.default_configuration[first_level_key].keys():
+                    if key not in Config.config[first_level_key].keys():
+                        Config.config[first_level_key][key] = Config.default_configuration[first_level_key][key]
+
         return Config.config
 
     @staticmethod

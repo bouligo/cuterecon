@@ -1,4 +1,4 @@
-from PySide6.QtCore import QAbstractTableModel, Qt
+from PySide6.QtCore import QAbstractTableModel, Qt, Signal
 import ipaddress  # sort by IP
 
 from PySide6.QtGui import QFont, QColor, QIcon
@@ -7,25 +7,28 @@ from core.database import Database
 
 
 class HostModel(QAbstractTableModel):
+    data_updated = Signal(int, int)  # Displayed number of hosts / all hosts
+
     def __init__(self, parent, controller):
         QAbstractTableModel.__init__(self, parent)
         self.controller = controller
         self.hosts = []
         self.headers = ['host_id', 'OS', 'IP', 'Hostname']
-        # self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'unknown': QIcon("icons/unknown.png")}
         self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'ios': QIcon("icons/ios.png"), 'unknown': QIcon("icons/unknown.png")}
         self.filter = ""
         self.filter_type = "host"
 
     def update_data(self):
+        hosts = []
         if self.filter_type == 'host':
-            hosts = Database.request("SELECT id as host_id, os, ip, hostname, pwned, highlight FROM hosts WHERE ip LIKE '%' || ? || '%' OR hostname LIKE '%' || ? || '%'", (self.filter, self.filter)).fetchall()
-            self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
+            all_hosts = Database.request("SELECT id as host_id, os, ip, hostname, pwned, highlight FROM hosts").fetchall()
+            hosts = Database.request("SELECT id as host_id, os, ip, hostname, pwned, highlight FROM hosts WHERE ip LIKE '%' || ? || '%' OR hostname LIKE '%' || ? || '%'",(self.filter, self.filter)).fetchall()
+            self.data_updated.emit(len(hosts), len(all_hosts))
         elif self.filter_type == 'port' and '/' in self.filter:
             proto, port = self.filter.split('/')
             hosts = Database.request("SELECT id as host_id, os, ip, hostname, pwned, highlight FROM hosts, hosts_ports WHERE hosts.id = hosts_ports.host_id AND hosts_ports.proto = ? AND hosts_ports.port = ?", (proto, port)).fetchall()
-            self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
 
+        self.hosts = sorted(hosts, key=lambda d: ipaddress.IPv4Address(d['ip']))
         self.layoutChanged.emit()  # https://stackoverflow.com/questions/45359569/how-to-update-qtableview-on-qabstracttablemodel-change
 
     def headerData(self, col, orientation, role):
@@ -42,7 +45,8 @@ class HostModel(QAbstractTableModel):
         return len(self.headers)
 
     def itemData(self, index):
-        return self.hosts[index.row()]
+        if index.row() >= 0:
+            return self.hosts[index.row()]
 
     def data(self, index, role = Qt.DisplayRole):
         if not index.isValid():
@@ -63,14 +67,14 @@ class HostModel(QAbstractTableModel):
             if index.column() == 1:
                 try:
                     return self.os[self.hosts[index.row()]['os'].lower()]
-                except KeyError: # Unknown OS from self.os
+                except KeyError:  # Unknown OS from self.os
                     return self.os['unknown']
-                except AttributeError: #Null value in DB
+                except AttributeError:  #Null value in DB
                     return self.os['unknown']
 
         if role == Qt.DisplayRole:
-            if index.column() == 0: # This is a hidden column
-                return self.hosts[index.row()]['id']
+            if index.column() == 0:  # This is a hidden column
+                return self.hosts[index.row()]['host_id']
             if index.column() == 2:
                 return self.hosts[index.row()]['ip']
             if index.column() == 3:
@@ -80,33 +84,6 @@ class HostModel(QAbstractTableModel):
         self.filter_type = filter_type
         self.filter = search_input
         self.update_data()
-
-    def update_hosts(self, hosts: dict) -> list:
-        '''
-
-        @param hosts: result from nmap_parser {'10.x.x.x': {'ip': '10.x.x.x, 'hostname': 'x', 'mac': '00:11:22:33:44:55', 'ports': {'tcp': {'53': {'status': 'open', 'description': 'dnsmasq UNKNOWN'}}, 'udp': {}}}
-        @return: array containing new hosts id's
-        '''
-        known_ips = [i['ip'] for i in Database.request("select distinct(ip) from hosts").fetchall()]
-        returning_host_ids = []
-        for host in hosts.keys():
-            if host not in known_ips:
-                sqlite_cursor = Database.request("insert into hosts(os, ip, hostname, mac, pwned) values(?, ?, ?, ?, 0)", (hosts[host]['os'], hosts[host]['ip'], hosts[host]['hostname'], hosts[host]['mac']))
-                host_id = sqlite_cursor.lastrowid
-                returning_host_ids.append(host_id)
-            else:
-                sqlite_cursor = Database.request('update hosts set hostname = ?, mac = ?, os = ? where ip = ? returning id', (hosts[host]['hostname'], hosts[host]['mac'], hosts[host]['os'], hosts[host]['ip']))
-                host_id = sqlite_cursor.fetchone()['id']
-                returning_host_ids.append(host_id)
-                Database.request('delete from hosts_ports where host_id = ?', (host_id,))
-
-            for proto in ['udp', 'tcp']:
-                for port in hosts[host]['ports'][proto]:
-                    Database.request("insert into hosts_ports(host_id, proto, port, status, description) values(?, ?, ?, ?, ?)",
-                                     (host_id, proto, port, hosts[host]['ports'][proto][port]['status'], hosts[host]['ports'][proto][port]['description']))
-
-        self.update_data()
-        return returning_host_ids
 
     def update_notes_for_host(self, host_id: int, notes: str):
         Database.request("update hosts set notes = ? where id = ?", (notes, host_id))
@@ -162,14 +139,12 @@ class HostModel(QAbstractTableModel):
         host['credentials'] = Database.request('select * from hosts_creds where host_id = ?', (host_id, )).fetchall()
         return host
 
-    def get_all_host_details(self):
-        res = []
-        for host in self.hosts:
-            res.append(self.get_host_details(host['host_id']))
-        return res
-
     def delete_host(self, host_id: int):
         Database.request('delete from hosts_ports where host_id = ?', (host_id,))
         Database.request('delete from hosts_tabs where host_id = ?', (host_id,))
         Database.request('delete from hosts where id = ?', (host_id,))
+        self.update_data()
+
+    def delete_hosts_with_no_services(self):
+        Database.request('DELETE FROM hosts WHERE id NOT IN (SELECT host_id from hosts_ports);')
         self.update_data()

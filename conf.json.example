@@ -5,7 +5,7 @@
     "core_binaries": {
         "nmap": {
             "binary": "/usr/bin/nmap",
-            "args": ["-v", "--min-rate", "500"]
+            "args": []
         },
         "terminal": {
             "binary": "/usr/bin/konsole",
@@ -22,6 +22,7 @@
             "text": "Run Netcat",
             "detached": true,
             "in_terminal": true,
+            "edit_before_launch": false,
             "binary": "/usr/bin/ncat",
             "args": ["-nv", "%%%IP%%%", "%%%PORT%%%"]
         },
@@ -30,6 +31,7 @@
             "text": "Launch Firefox",
             "detached": true,
             "in_terminal": false,
+            "edit_before_launch": false,
             "binary": "/usr/bin/firefox",
             "icon": "/usr/share/icons/hicolor/256x256/apps/firefox.png",
             "args": ["-P", "tmp", "http://%%%IP%%%:%%%PORT%%%/"]
@@ -39,6 +41,7 @@
             "text": "Launch Nikto",
             "detached": false,
             "in_terminal": false,
+            "edit_before_launch": false,
             "binary": "/usr/bin/nikto",
             "args": ["--host", "%%%IP%%%", "--port", "%%%PORT%%%"]
         },
@@ -47,6 +50,7 @@
             "text": "Launch Nuclei",
             "detached": false,
             "in_terminal": false,
+            "edit_before_launch": false,
             "binary": "/usr/bin/nuclei",
             "args": ["-u", "%%%IP%%%", "-ni"]
         },
@@ -54,6 +58,7 @@
             "name": "feroxbuster",
             "text": "Scan files and folders with feroxbuster",
             "detached": false,
+            "edit_before_launch": false,
             "binary": "/usr/bin/feroxbuster",
             "args": ["-n", "-k", "-e", "--thorough", "-B", "--no-state", "-C", "404", "400", "--url", "%%%PROTO%%%://%%%IP%%%:%%%PORT%%%/", "-w", "/usr/share/wordlists/SecLists/Discovery/Web-Content/raft-large-directories-and-files.txt"]
         },
@@ -62,6 +67,7 @@
             "text": "Launch custom smb enumeration script",
             "comment": "",
             "detached": false,
+            "edit_before_launch": false,
             "binary": "/bin/bash",
             "args": ["scripts/smb.sh","%%%IP%%%"]
         },
@@ -566,5 +572,16 @@
         "include_ocr" : false,
         "processes_blacklist" : ["systemd", "kthreadd", "dbus-send", "Xorg", "sddm-helper", "(sd-pam)", "startplasma-x11", "dbus-daemon", "xdg-desktop-portal", "xdg-document-portal", "xdg-permission-store", "fusermount3", "ksmserver", "kded5", "kwin_x11", "kglobalaccel5", "dconf-service", "plasmashell", "kactivitymanagerd", "gmenudbusmenuproxy", "polkit-kde-authentication-agent-1", "at-spi-bus-launcher", "plasma-browser-integration-host", "Socket Process", "Privileged Cont", "WebExtensions", "Utility Process", "plasma-browser-integration-host", "zsh", "script", "Isolated Web Co", "smbnotifier", "kioslave5", "vim", "agent", "yakuake", "kscreen_backend_launcher", "xdg-desktop-portal-kde", "org_kde_powerdevil", "pulseaudio", "kaccess", "pipewire", "keepassxc", "DiscoverNotifier", "kiod5", "chrome_crashpad_handler", "Web Content", "kio-fuse", "dolphin", "obexd", "wireplumber", "xembedsniproxy", "gsettings-helper", "chromium", "signal-desktop", "Discord", "electron", "fsnotifier", "RDD Process"],
         "processes_ppid_blacklist" : [1, 2]
+    },
+    "nmap_options": {
+        "ports": "T:-,U:53,161,631",
+        "type": "-sS",
+        "speed": "-T3",
+        "skip_host_discovery": false,
+        "version_probing": true,
+        "default_scripts": true,
+        "os_detection": true,
+        "tcp_and_udp": true,
+        "additional_args": "-v --min-rate 500"
     }
 }

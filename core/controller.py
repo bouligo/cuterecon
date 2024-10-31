@@ -6,9 +6,10 @@ from datetime import datetime
 from PySide6.QtCore import QProcess, QModelIndex, QTimer
 import html2text
 import ipaddress  # sort by IP
+import shlex
 
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon, QApplication
+from PySide6.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon, QApplication, QHeaderView
 
 from core.config import Config
 from core.models.credsmodel import CredsModel
@@ -19,10 +20,12 @@ from core.models.hostmodel import HostModel
 from core.models.logmodel import LogModel
 from core.models.jobmodel import JobModel
 from utils.Screenshot import Screenshot, get_dir_size
+from utils.openDB import Popup_open_db
+from utils.nmapImporter import ProgressBar_update_hosts, Thread_import_xml_nmap
 
 
 class Controller:
-    APPLICATION_VERSION = "1.5"
+    APPLICATION_VERSION = "1.6"
     autosave_timer = QTimer()
     progression_bar_timer = QTimer()
     screenshot_mgr = None
@@ -37,6 +40,9 @@ class Controller:
 
         self.setup_initial_project()
 
+        self.view.setup_ui()
+        self.view.connect_slots()
+
         if len(sys.argv) > 1:
             file_path = os.path.realpath(sys.argv[1])
             self.open_db(file_path)
@@ -46,7 +52,7 @@ class Controller:
         self.setup_models()
 
         if Config.default_configuration_loaded:
-            QMessageBox.information(None, 'No custom configuration found', 'QtRecon could not find your customized configuration file. Please copy the default example configuration file <i>config.json.example</i> to <i>config.json</i>, and edit its content to use your favorite tools !')
+            Config.save_config()  # Saving default configuration as conf.json
         binaries_issues = Config.check_binaries()
         for binary_not_found in binaries_issues['not_found']:
             self.log('RUNTIME', f"Binary {binary_not_found} cannot be found.")
@@ -66,9 +72,12 @@ class Controller:
         self.ui.ui.host_list.setModel(self.host_model)
         self.ui.ui.hosts_for_port_table.setModel(self.hosts_for_port_model)
         self.ui.ui.log_table.setModel(self.log_model)
+        self.ui.ui.log_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.ui.job_table.setModel(self.job_model)
         self.ui.ui.creds_table.setModel(self.creds_model)
-        self.view.setup_ui()
+
+        self.ui.ui.host_list.selectionModel().selectionChanged.connect(self.update_right_panel)  # Data must be filled in before using this method, otherwise selectionModel() returns None
+
         self.hosts_for_port_model.filter_hostlist('port', '')
         self.host_model.layoutChanged.emit()
         self.log_model.layoutChanged.emit()
@@ -77,6 +86,12 @@ class Controller:
         self.hosts_for_port_model.update_data()
         self.hosts_for_port_model.layoutChanged.emit()
         self.creds_model.update_data()
+
+        self.ui.ui.work.setTabText(0, "Hosts (0)")
+        self.ui.ui.work.setTabText(1, "Services (0)")
+        self.ui.ui.work.setTabText(2, "Credentials (0)")
+        self.host_model.data_updated.connect(lambda displayed, max: self.ui.ui.work.setTabText(0, f"Hosts ({max})" if displayed == max else f"Hosts ({displayed}/{max})"))
+        self.creds_model.data_updated.connect(lambda number: self.ui.ui.work.setTabText(2, f"Credentials ({number})"))
 
     def save_conf(self):
         raise NotImplementedError
@@ -128,28 +143,16 @@ class Controller:
 
     def open_db(self, filename: str):
         if self.clear_db():
-            exception = Database.import_DB(filename)
+            self.setup_models()
 
-            if exception:
-                QMessageBox.critical(None, 'Could not load session', 'Exception occurred: ' + str(exception))
-            else:
-                self.setup_models()
-                self.host_model.update_data()
-                self.hosts_for_port_model.update_data()
-                self.update_hosts_for_port_panel()
-                self.log_model.update_data()
-                self.log('RUNTIME', f"Restored session {filename}")
-                Database.has_unsaved_data = False
-                self.ui.ui.actionAutosave_database_every_5_mins.setEnabled(True)
+            self.Popup_open_db = Popup_open_db(self, filename)
+            self.Popup_open_db.show()
 
-            self.ui.ui.host_list.clearSelection()
-            self.log_model.layoutChanged.emit()
-
-    def get_job(self, id: int) -> dict:
+    def get_job(self, id: int):  # -> Job
         return self.job_model.get_job(id)
 
     def get_selected_host(self, host: QModelIndex = None) -> dict:
-        if not host and not self.host_model.itemData(self.ui.ui.host_list.currentIndex()):
+        if (host and host.row() == -1) or (not host and not self.host_model.itemData(self.ui.ui.host_list.currentIndex())):
             return ""
 
         if host:
@@ -171,6 +174,9 @@ class Controller:
                 self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
                 self.ui.ui.work.setCurrentIndex(0)
                 return
+
+    def delete_hosts_with_no_services(self):
+        self.host_model.delete_hosts_with_no_services()
 
     def set_host_pwned(self, index: QModelIndex):
         host = self.get_selected_host(index)
@@ -209,6 +215,7 @@ class Controller:
         host = self.get_selected_host(index)
         self.host_model.delete_host(host['id'])
         self.hosts_for_port_model.update_data()
+        self.update_hosts_for_port_panel()
         creds_to_remove = [cred['id'] for cred in self.creds_model.get_creds_for_host(host['id'])]
         self.remove_creds(creds_to_remove)
         self.creds_model.update_data()
@@ -228,31 +235,37 @@ class Controller:
             self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
 
     def update_hosts_for_port_panel(self):
-        ports_tcp = []
-        ports_udp = []
-        for host in self.host_model.get_all_host_details():
-            for port in host['ports']:
-                if port['proto'] == 'tcp':
-                    ports_tcp.append(int(port['port']))
-                elif port['proto'] == 'udp':
-                    ports_udp.append(int(port['port']))
+        ports_tcp = [i['port'] for i in Database.request('SELECT port FROM hosts_ports WHERE proto == "tcp" ORDER BY CAST(port AS INTEGER) ASC;').fetchall()]
+        ports_udp = [i['port'] for i in Database.request('SELECT port FROM hosts_ports WHERE proto == "udp" ORDER BY CAST(port AS INTEGER) ASC;').fetchall()]
+        unique_ports_tcp = [i['port'] for i in Database.request('SELECT DISTINCT port FROM hosts_ports WHERE proto == "tcp" ORDER BY CAST(port AS INTEGER) ASC;').fetchall()]
+        unique_ports_udp = [i['port'] for i in Database.request('SELECT DISTINCT port FROM hosts_ports WHERE proto == "udp" ORDER BY CAST(port AS INTEGER) ASC;').fetchall()]
 
-        unique_port_udp = sorted(list(dict.fromkeys(ports_udp)))
-        unique_port_tcp = sorted(list(dict.fromkeys(ports_tcp)))
-        self.view.update_hosts_for_port_panel({'udp':unique_port_udp, 'tcp':unique_port_tcp})
+        # if len(ports_tcp) + len(ports_udp):
+        self.ui.ui.work.setTabText(1, f"Services ({len(ports_tcp) + len(ports_udp)})")
+        # else:
+            # self.ui.ui.work.setTabText(1, "Services (0)")
 
-    def parse_nmap_data(self, filetype: str, data: str | dict) -> None | list:
+        self.view.update_hosts_for_port_panel({'udp': unique_ports_udp, 'tcp': unique_ports_tcp})
+
+    def start_parse_nmap_data(self, caller: View | JobModel, filetype: str, data: list | dict):
         '''
-
+        @param caller: Object calling this method, from the view or the job model
         @param filetype: type of results to parse ('nmap' or 'xml')
-        @param data: path to xml or dict of nmap file to parse
-        @return: new hosts and ports added to the database if filetype is xml, else nothing
+        @param data: list of paths to xml(s) or dict of nmap file to parse
+
         '''
-        nmap_parser = NmapParser(data)
         if filetype == 'xml':
-            nmap_data = nmap_parser.parse_xml()
-            new_hosts = self.host_model.update_hosts(nmap_data)
+            if isinstance(caller, View):
+                self.popup_progressbar = ProgressBar_update_hosts(self, data)
+                self.popup_progressbar.show()
+            if isinstance(caller, JobModel):
+                parser = Thread_import_xml_nmap(data)
+                parser.import_xml_files()
+                self.finished_parse_nmap_data(parser.returning_host_ids)
+                return parser.returning_host_ids
+
         elif filetype == 'nmap':
+            nmap_parser = NmapParser(data)
             nmap_output = nmap_parser.parse_nmap()
             self.host_model.update_nmap_output(nmap_output)
         else:
@@ -262,8 +275,15 @@ class Controller:
             self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
         self.update_hosts_for_port_panel()
 
-        if filetype == 'xml':
-            return new_hosts
+    def finished_parse_nmap_data(self, new_hosts):
+        self.log('INFO', f"Imported {len(new_hosts)} hosts from XML files")
+        self.host_model.update_data()
+        self.update_right_panel()
+        self.update_hosts_for_port_panel()
+        self.view.setup_ui()
+
+        if Config.get()['user_prefs']['enable_autorun_on_xml_import']:
+            self.autorun(new_hosts)
 
     def filter_hostlist(self, search_input: str):
         self.ui.ui.host_list.clearSelection()
@@ -283,7 +303,7 @@ class Controller:
                 for port in ['any', port_details['port']]:
                     if port_details['proto'] in Config.get()['autorun'] and port in Config.get()['autorun'][port_details['proto']]:
                         for program in Config.get()['autorun'][port_details['proto']][port]:
-                            self.log('AUTORUN', f"Running {program} on {port_details['proto']}://{host_details['ip']}:{port}")
+                            self.log('AUTORUN', f"Running {Config.get()['user_binaries'][program]['name']} on {port_details['proto']}://{host_details['ip']}:{port}")
                             self.new_job(Config.get()['user_binaries'][program], host_details['id'], port)
 
     def log(self, category: str, data: str):
@@ -338,52 +358,75 @@ class Controller:
     def update_credentials(self, cred_id: str, column: str, new_value: str):
         self.creds_model.update_credentials(cred_id, column, new_value)
 
+    def parse_creds_from_file(self, filetype: str, filename: str) -> list:
+        with open(filename, 'r') as f:
+            content = f.readlines()
+
+        if filetype == 'secretsdump':
+            return self.creds_model.parse_creds_from_secretsdump(content)
+        elif filetype == 'user:password':
+            return self.creds_model.parse_creds_from_user_password(content)
+        elif filetype == 'user:hash':
+            return self.creds_model.parse_creds_from_user_hash(content)
+
+    def replace_variables(self, input_string, credtype=None, domain=None, username=None, password=None, host_id: str = "", port: str = "") -> str:
+        host_dst = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()
+        port_dst = port if port else self.get_selected_port()
+
+        output_string = input_string
+        if host_dst:
+            output_string = input_string.replace("%%%IP%%%", host_dst['ip'])
+            if host_dst['hostname']:
+                output_string = output_string.replace("%%%HOSTNAME%%%", host_dst['hostname'])
+            else:
+                output_string = output_string.replace("%%%HOSTNAME%%%", host_dst['ip'])
+        output_string = output_string.replace("%%%PORT%%%", port_dst)
+        if credtype:
+            output_string = output_string.replace(f"%%%DOMAIN%%%", domain)
+            output_string = output_string.replace(f"%%%USERNAME%%%", username)
+            if f"%%%{credtype.upper()}%%%" in output_string:
+                output_string = output_string.replace(f"%%%{credtype.upper()}%%%", password)
+        for variable in Config.get()['user_variables']:
+            # if Config.get()['user_variables'][variable]:
+            output_string = output_string.replace(f"%%%{variable}%%%", Config.get()['user_variables'][variable])
+
+        return output_string
+
+
     def new_job(self, program: dict, host_id: str = "", port: str = ""):
         host_dst = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()
         port_dst = port if port else self.get_selected_port()
+        credtype = domain = username = password = None
+        all_uncaught_user_variables = {}
 
         if 'args' in program:
             args = program['args'].copy()
 
             # Check if creds are needed and available for this host and command
-            creds = []
-            replace_command_line_with_creds = False
+            creds_from_database = []
             if any(item in ' '.join(program['args']) for item in ['%%%DOMAIN%%%', '%%%USERNAME%%%']):
-                creds += Database.request("SELECT * FROM hosts_creds WHERE host_id = ?", (host_dst['id'], )).fetchall()
+                creds_from_database += Database.request("SELECT * FROM hosts_creds WHERE host_id = ?", (host_dst['id'], )).fetchall()
             else:
                 creds_types_available = [row['type'] for row in Database.request("SELECT DISTINCT type FROM hosts_creds WHERE host_id = ?", (host_dst['id'],)).fetchall()]
                 for cred_type_available in creds_types_available:
                         if f"%%%{cred_type_available.upper()}%%%" in  ' '.join(program['args']):
-                            creds += Database.request("SELECT * FROM hosts_creds WHERE host_id = ? AND type = ?", (host_dst['id'], cred_type_available)).fetchall()
-            if creds:
+                            creds_from_database += Database.request("SELECT * FROM hosts_creds WHERE host_id = ? AND type = ?", (host_dst['id'], cred_type_available)).fetchall()
+            if creds_from_database:
                 reply = QMessageBox.question(None, 'Valid credentials are available', f"Valid credentials are available to use against this target. Do you want to use them ?")
                 if reply == QMessageBox.Yes:
-                    credtype, domain, username, password = self.view.select_credentials_dialog(creds)
-                    if [credtype, domain, username, password] != [None, None, None, None]:  # User canceled
-                        replace_command_line_with_creds = True
+                    credtype, domain, username, password = self.view.select_credentials_dialog(creds_from_database)
 
             for i in range(len(program['args'])):
-                args[i] = args[i].replace("%%%IP%%%", host_dst['ip'])
-                args[i] = args[i].replace("%%%HOSTNAME%%%", host_dst['ip'])
-                args[i] = args[i].replace("%%%PORT%%%", port_dst)
-                if replace_command_line_with_creds:
-                    args[i] = args[i].replace(f"%%%DOMAIN%%%", domain)
-                    args[i] = args[i].replace(f"%%%USERNAME%%%", username)
-                    if f"%%%{credtype.upper()}%%%" in args[i]:
-                        args[i] = args[i].replace(f"%%%{credtype.upper()}%%%", password)
-                for variable in Config.get()['user_variables']:
-                    if Config.get()['user_variables'][variable]:
-                        args[i] = args[i].replace(f"%%%{variable}%%%", Config.get()['user_variables'][variable])
+                args[i] = self.replace_variables(args[i], credtype, domain, username, password, host_id, port)
 
-                uncaught_user_variables = re.findall('%{3}[a-zA-Z-_]+%{3}', args[i])
-                if uncaught_user_variables:
-                    for uncaught_user_variable in uncaught_user_variables:
-                        reply = QInputDialog.getText(None, 'Unset variable', f"While trying to launch {program['name']} on {host_dst['ip']}:{port_dst}, the variable {uncaught_user_variable} was not set. You can specify it now:")
-                        if reply[1]:
-                            args[i] = args[i].replace(f"{uncaught_user_variable}", reply[0])
-                        else:
-                            return
-
+                re_uncaught_user_variables = re.findall('%{3}[a-zA-Z-_]+%{3}', args[i])
+                all_uncaught_user_variables = {}
+                for uncaught_user_variable in re_uncaught_user_variables:
+                    reply = QInputDialog.getText(None, 'Unset variable',
+                                                 f"While trying to launch {program['name']} on {host_dst['ip']}:{port_dst}, the variable {uncaught_user_variable} was not set. You can specify it now:")
+                    if reply[1]:
+                        args[i] = args[i].replace(f"{uncaught_user_variable}", reply[0])
+                        all_uncaught_user_variables[uncaught_user_variable] = reply[0]
         else:
             args = []
 
@@ -391,6 +434,13 @@ class Controller:
             working_directory = program['working_directory']
         else:
             working_directory = None
+
+        if 'edit_before_launch' in program.keys() and program['edit_before_launch']:
+            reply, validated = QInputDialog.getText(None, 'Edit command', f"This program is set to be reviewed before launching. Here is the command that will be executed:", text=program['binary'] + ' '+' '.join(args))
+            if reply and validated:
+                program['binary'], *args = shlex.split(reply)
+            else:
+                return
 
         if program['detached']:
             if 'in_terminal' in program.keys() and program['in_terminal']:
@@ -400,11 +450,15 @@ class Controller:
             else:
                 self.start_detached_job(program['binary'], args, working_directory)
         else:
+            title = self.replace_variables(program['name'], credtype, domain, username, password, host_id, port)
+            for uncaught_user_variable in all_uncaught_user_variables.items():
+                title = title.replace(uncaught_user_variable[0], uncaught_user_variable[1])
+
             job_id = self.start_attached_job(program['binary'], args, working_directory, host_dst['ip'])
-            self.host_model.create_external_tab(host_dst['id'], program['name'], job_id)
+            self.host_model.create_external_tab(host_dst['id'], title, job_id)
             if self.get_selected_host():
                 if host_dst and self.get_selected_host()['ip'] == host_dst['ip']:
-                    self.view.new_tab(program['name'], job_id, "") # "" ?
+                    self.view.new_tab(title, job_id)
 
     def kill_job(self, job_id: int):
         self.job_model.get_job(job_id).kill()
@@ -415,9 +469,13 @@ class Controller:
     def resume_job(self, job_id: int):
         self.job_model.get_job(job_id).resume()
 
-    def new_scan(self, target: str, speed: str, ports: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool, tcp_and_udp: bool):
+    def new_scan(self, target: str, ports: str, type: str, speed: str, additional_args: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool, tcp_and_udp: bool, save_as_default: bool):
+        if save_as_default:
+            Config.config['nmap_options'] = {'ports': ports, 'type': type, 'speed': speed, 'additional_args': additional_args, 'skip_host_discovery': skip_host_discovery, 'version_probing': version_probing, 'default_scripts': default_scripts, 'os_detection': os_detection, 'tcp_and_udp': tcp_and_udp}
+            Config.save_config()
+
         self.log('INFO', 'Starting new scan on ' + target)
-        self.job_model.new_scan(target, speed, ports, skip_host_discovery, version_probing, default_scripts, os_detection, tcp_and_udp)
+        self.job_model.new_scan(target, ports, type, speed, additional_args, skip_host_discovery, version_probing, default_scripts, os_detection, tcp_and_udp)
 
     def start_attached_job(self, command: str, args: list, working_directory: str, host_id: int) -> int:
         self.log('INFO', f"Starting new job ({command} {' '.join(args)})")
@@ -444,16 +502,49 @@ class Controller:
         if not work_folder:
             QMessageBox.critical(None, "Error", "Temporary work folder is required !")
             return
+        if not os.path.exists(work_folder):
+            try:
+                os.mkdir(work_folder)
+            except Exception as e:
+                QMessageBox.critical(None, "Error", "Temporary work folder does not exist and cannot be created !\n"+str(e))
+                return
+        if not os.access(work_folder, os.W_OK):
+            QMessageBox.critical(None, "Error", "Temporary work folder is not writable !")
+            return
         if not dst_folder:
             QMessageBox.critical(None, "Error", "Final destination folder is required !")
+            return
+        if not os.path.exists(dst_folder):
+            try:
+                os.mkdir(dst_folder)
+            except Exception as e:
+                QMessageBox.critical(None, "Error", "Final work folder does not exist and cannot be created !\n"+str(e))
+                return
+        if not os.access(dst_folder, os.W_OK):
+            QMessageBox.critical(None, "Error", "Final work folder is not writable !")
             return
         if check_locked_screen and (not check_locked_screen_cmd or not check_locked_screen_cmd_result):
             QMessageBox.critical(None, "Error", "Please specify command to check if the screen is locked, and the expected output.")
             return
 
+        # Modify configuration on disk with current settings
+        Config.set(['screenshots', 'engine'], engine)
+        Config.set(['screenshots', 'interval'], interval)
+        Config.set(['screenshots', 'dst_folder'], dst_folder)
+        Config.set(['screenshots', 'work_folder'], work_folder)
+        Config.set(['screenshots', 'pixel_threshold_different_images'], pixel_threshold_different_images)
+        Config.set(['screenshots', 'check_locked_screen'], check_locked_screen)
+        Config.set(['screenshots', 'check_locked_screen_cmd'], check_locked_screen_cmd)
+        Config.set(['screenshots', 'check_locked_screen_cmd_result'], check_locked_screen_cmd_result)
+        Config.set(['screenshots', 'screenshot_cmd'], screenshot_cmd)
+        Config.set(['screenshots', 'ignore_if_active_window'], ignore_if_active_window)
+        Config.set(['screenshots', 'convert_png_to_jpg'], convert_png_to_jpg)
+        Config.set(['screenshots', 'include_processes'], include_processes)
+        Config.set(['screenshots', 'include_ocr'], include_ocr)
+        Config.save_config()
+
+        # Launch
         if self.screenshot_mgr is None:
-            processes_blacklist = Config.get()['screenshots']['processes_blacklist'] if 'screenshots' in Config.get().keys() and 'processes_blacklist' in Config.get()['screenshots'].keys() else None
-            processes_ppid_blacklist = Config.get()['screenshots']['processes_ppid_blacklist'] if 'screenshots' in Config.get().keys() and 'processes_ppid_blacklist' in Config.get()['screenshots'].keys() else None
             self.screenshot_mgr = Screenshot(engine=engine,
                                              dst_folder=dst_folder,
                                              work_folder=work_folder,
@@ -466,8 +557,8 @@ class Controller:
                                              convert_png_to_jpg=convert_png_to_jpg,
                                              include_processes=include_processes,
                                              include_ocr=include_ocr,
-                                             processes_blacklist=processes_blacklist,
-                                             processes_ppid_blacklist=processes_ppid_blacklist)
+                                             processes_blacklist=Config.get()['screenshots']['processes_blacklist'],
+                                             processes_ppid_blacklist=Config.get()['screenshots']['processes_ppid_blacklist'])
             self.ui.ui.button_save_screenshot.setEnabled(True)
             self.ui.ui.number_of_screenshots.setText("")
             self.ui.ui.progressBar.setMaximum(interval*1000)

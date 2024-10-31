@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'custom_commandlJJZkF.ui'
+## Form generated from reading UI file 'custom_commandYdEOVN.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.1
 ##
@@ -77,7 +77,7 @@ class Ui_Dialog(object):
     # setupUi
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
+        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Enter custom command", None))
         self.label.setText(QCoreApplication.translate("Dialog", u"Command", None))
         self.label_2.setText(QCoreApplication.translate("Dialog", u"Note: You can use %%%IP%%% or %%%PORT%%% to automaticaly use information from the current selected host", None))
         self.detached.setText(QCoreApplication.translate("Dialog", u"External program", None))

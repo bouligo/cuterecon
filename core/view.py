@@ -1,10 +1,11 @@
 import re
+import sys
 
 from PySide6.QtGui import QCursor, QIcon, QTextCursor
 from PySide6.QtWidgets import QApplication, QFileDialog, QTabBar, QTableWidgetItem, QMenu, QTextEdit, QTableWidget, \
     QAbstractItemView, QMessageBox, QInputDialog, QDialog, QLabel, QLineEdit, QHeaderView, QWidget, QComboBox, \
     QTableView
-from PySide6.QtCore import QPoint, QModelIndex, Qt
+from PySide6.QtCore import QPoint, QModelIndex, Qt, QItemSelection, QLibraryInfo, QSysInfo
 
 import ipaddress  # check input for IP
 import netifaces # Get ifaces ip addr
@@ -15,9 +16,9 @@ from core.config import Config
 from ui.custom_command import Custom_Command
 from ui.new_scan import New_Scan
 from ui.search import Search
-from ui.set_variables import Set_Variables
 from ui.about import About
 from ui.credentials import Credentials_dialog
+from ui.settings import Settings
 from utils.QNoteTextEdit import QNoteTextEdit
 
 
@@ -32,8 +33,8 @@ class View:
                              {'name': 'Notes', 'object': type(QNoteTextEdit())}]
         self.app_tabs = dict()
 
-        self.setup_ui()
-        self.connect_slots()
+        # self.setup_ui()
+        # self.connect_slots() # Must be called after the model is bind to the view (so, called by the controller)
 
     def setup_ui(self):
         self.ui.ui.host_list.setColumnHidden(0, True)
@@ -50,30 +51,28 @@ class View:
         self.ui.ui.actionEnable_automatic_tools.setChecked(Config.get()['user_prefs']['enable_autorun'])
         self.ui.ui.actionAutosave_database_every_5_mins.setChecked(Config.get()['user_prefs']['autosave'])
         self.ui.ui.actionEnable_automatic_tools_on_import.setChecked(Config.get()['user_prefs']['enable_autorun_on_xml_import'])
-        self.ui.ui.host_list.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.ui.host_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.ui.ui.host_list.setColumnWidth(2, 130)  # IP column width
 
-        if 'screenshots' in Config.get().keys():
-            if 'engine' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['engine'] == "external":
-                self.ui.ui.radioButton_screenshots_external.toggle()
-            if 'interval' in Config.get()['screenshots'].keys():
-                self.ui.ui.spinBox_screenshots_interval.setValue(Config.get()['screenshots']['interval'])
-                self.ui.ui.progressBar.setMaximum(Config.get()['screenshots']['interval'])
-            if 'dst_folder' in Config.get()['screenshots'].keys(): self.ui.ui.screenshot_dst_folder.setText(Config.get()['screenshots']['dst_folder'])
-            if 'work_folder' in Config.get()['screenshots'].keys(): self.ui.ui.screenshot_work_folder.setText(Config.get()['screenshots']['work_folder'])
-            if 'pixel_threshold_different_images' in Config.get()['screenshots'].keys(): self.ui.ui.pixel_slider.setValue(Config.get()['screenshots']['pixel_threshold_different_images'])
-            if 'check_locked_screen_cmd' in Config.get()['screenshots'].keys(): self.ui.ui.cmd_check_lockscreen.setText(Config.get()['screenshots']['check_locked_screen_cmd'])
-            if 'check_locked_screen_cmd_result' in Config.get()['screenshots'].keys(): self.ui.ui.cmd_check_result_lockscreen.setText(Config.get()['screenshots']['check_locked_screen_cmd_result'])
-            if 'screenshot_cmd' in Config.get()['screenshots'].keys(): self.ui.ui.screenshot_cmd.setText(Config.get()['screenshots']['screenshot_cmd'])
-            if 'check_locked_screen' in Config.get()['screenshots'].keys():
-                if Config.get()['screenshots']['check_locked_screen']:
-                    self.ui.ui.checkBox_screenshot_lockscreen.setCheckState(Qt.CheckState.Checked)
-                else:
-                    self.ui.ui.cmd_check_lockscreen.setEnabled(False)
-                    self.ui.ui.cmd_check_result_lockscreen.setEnabled(False)
-            if 'ignore_if_active_window' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['ignore_if_active_window']: self.ui.ui.checkBox_screenshot_ignore_if_active_window.setCheckState(Qt.CheckState.Checked)
-            if 'convert_png_to_jpg' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['convert_png_to_jpg']: self.ui.ui.checkBox_screenshot_jpg.setCheckState(Qt.CheckState.Checked)
-            if 'include_processes' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['include_processes']: self.ui.ui.checkBox_screenshot_processes.setCheckState(Qt.CheckState.Checked)
-            if 'include_ocr' in Config.get()['screenshots'].keys() and Config.get()['screenshots']['include_ocr']: self.ui.ui.checkBox_screenshot_ocr.setCheckState(Qt.CheckState.Checked)
+        if Config.get()['screenshots']['engine'] == "external":
+            self.ui.ui.radioButton_screenshots_external.toggle()
+        self.ui.ui.spinBox_screenshots_interval.setValue(Config.get()['screenshots']['interval'])
+        self.ui.ui.progressBar.setMaximum(Config.get()['screenshots']['interval'])
+        self.ui.ui.screenshot_dst_folder.setText(Config.get()['screenshots']['dst_folder'])
+        self.ui.ui.screenshot_work_folder.setText(Config.get()['screenshots']['work_folder'])
+        self.ui.ui.pixel_slider.setValue(Config.get()['screenshots']['pixel_threshold_different_images'])
+        self.ui.ui.cmd_check_lockscreen.setText(Config.get()['screenshots']['check_locked_screen_cmd'])
+        self.ui.ui.cmd_check_result_lockscreen.setText(Config.get()['screenshots']['check_locked_screen_cmd_result'])
+        self.ui.ui.screenshot_cmd.setText(Config.get()['screenshots']['screenshot_cmd'])
+        if Config.get()['screenshots']['check_locked_screen']:
+            self.ui.ui.checkBox_screenshot_lockscreen.setCheckState(Qt.CheckState.Checked)
+        else:
+            self.ui.ui.cmd_check_lockscreen.setEnabled(False)
+            self.ui.ui.cmd_check_result_lockscreen.setEnabled(False)
+        if Config.get()['screenshots']['ignore_if_active_window']: self.ui.ui.checkBox_screenshot_ignore_if_active_window.setCheckState(Qt.CheckState.Checked)
+        if Config.get()['screenshots']['convert_png_to_jpg']: self.ui.ui.checkBox_screenshot_jpg.setCheckState(Qt.CheckState.Checked)
+        if Config.get()['screenshots']['include_processes']: self.ui.ui.checkBox_screenshot_processes.setCheckState(Qt.CheckState.Checked)
+        if Config.get()['screenshots']['include_ocr']: self.ui.ui.checkBox_screenshot_ocr.setCheckState(Qt.CheckState.Checked)
 
         self.reset_ui_snippets()
 
@@ -103,20 +102,20 @@ class View:
                         current_string += chunk + '<br />'
                 elif isinstance(chunk, list):
                     if final_subsection and '<h' not in final_subsection:
-                        final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
                     current_string += create_subsection(level+1, chunk)
 
                 if '<h' in current_string:
                     if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
-                        final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
                     final_subsection += current_string
                 else:
                     final_subsection += current_string
                     if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
-                        final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
 
             if final_subsection and '<h' not in final_subsection:
-                final_subsection = f'<p style="background-color: black; color: white; font-family: Hack, DejaVu Sans Mono, Droid Sans Mono, Courier;">{final_subsection}</p>'
+                final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
 
             # Clean-up
             final_subsection = re.sub('(<p[^>]+>)(<p[^>]+>)+', '\\1', final_subsection)
@@ -140,6 +139,11 @@ class View:
 
             section = section.replace("%%%LHOST%%%", self.ui.ui.lhost.text())
             section = section.replace("%%%LPORT%%%", self.ui.ui.lport.text())
+            tab = tab.replace("%%%LHOST%%%", self.ui.ui.lhost.text())
+            tab = tab.replace("%%%LPORT%%%", self.ui.ui.lport.text())
+            for variable in Config.get()['user_variables']:
+                section = section.replace(f"%%%{variable}%%%", Config.get()['user_variables'][variable])
+                tab = tab.replace(f"%%%{variable}%%%", Config.get()['user_variables'][variable])
 
             tabs[i].setHtml(section)
             tabs[i].moveCursor(QTextCursor.Start)
@@ -151,14 +155,16 @@ class View:
         self.ui.ui.actionSave.triggered.connect(self.save_db)
         self.ui.ui.actionSaveAs.triggered.connect(self.save_as_db)
         self.ui.ui.actionExit.triggered.connect(self.ui.close)
-        self.ui.ui.actionSet_variables.triggered.connect(self.set_variables)
         self.ui.ui.actionSearch_string.triggered.connect(self.dialog_search)
+        self.ui.ui.actionDelete_hosts_with_no_services.triggered.connect(self.delete_hosts_with_no_services)
+        self.ui.ui.actionSettings.triggered.connect(self.dialog_settings)
         self.ui.ui.actionReload_configuration_from_file.triggered.connect(self.controller.reload_conf)
         self.ui.ui.actionAbout.triggered.connect(self.about)
         self.ui.ui.actionAbout_Qt.triggered.connect(QApplication.aboutQt)
         self.ui.ui.ImportNmap.clicked.connect(self.dialog_import_xml)
         self.ui.ui.ScanHost.clicked.connect(self.dialog_scan_host)
-        self.ui.ui.host_list.clicked.connect(self.update_right_panel)
+        # self.ui.ui.host_list.clicked.connect(self.update_right_panel)
+        # self.ui.ui.host_list.selectionModel().selectionChanged.connect(self.update_right_panel)  # Data must be filled in before using this method, otherwise selectionModel() returns None
         self.ui.ui.button_play.clicked.connect(self.clicked_button_play)
         self.ui.ui.button_pause.clicked.connect(self.clicked_button_pause)
         self.ui.ui.button_stop.clicked.connect(self.clicked_button_stop)
@@ -192,10 +198,21 @@ class View:
     def about(self):
         about_dialog = About()
         about_dialog.setWindowTitle("About this program")
-        about_dialog.ui.text.setText(f"<h1>QtRecon {self.controller.APPLICATION_VERSION}</h1><p>2023, licenced under Creative Commons <i>CC-BY</i></p><p>Thanks to my friends, for all the advices they gave me and the beta-testing while developping this thing</br ></p><a href='https://github.com/bouligo/cuterecon/'>https://github.com/bouligo/cuterecon/</a>")
+        about_dialog.ui.text.setText(f"""<h1>QtRecon {self.controller.APPLICATION_VERSION}</h1>
+        <p>2023-2024, licenced under Creative Commons <i>CC-BY</i></p>
+        <p>Thanks to my friends, for all the advices they gave me and the beta-testing while developping this thing</br ></p>
+        <a href='https://github.com/bouligo/cuterecon/'>https://github.com/bouligo/cuterecon/</a>
+        <br /><br />
+        <b><u>Python version:</u></b> {sys.version}<br /><br /><b><u>Qt version:</u></b> {QLibraryInfo.build()}<br /><br /><b><u>Operating system:</u></b> {QSysInfo.prettyProductName()}
+""")
         # about_dialog.ui.image.setPixmap("icons/icon.ico")  # Integrated in UI now
         about_dialog.ui.button.clicked.connect(about_dialog.close)
         about_dialog.exec()
+
+    def dialog_settings(self):
+        settings_dialog = Settings()
+        if settings_dialog.exec():
+            self.controller.reload_conf()
 
     def dialog_search(self):
         search_dialog = Search()
@@ -215,20 +232,8 @@ class View:
             self.controller.search_string_in_db_hosts(search_dialog.ui.search_input.text(),
             search_dialog.ui.host_list.currentItem().text())))
 
-    def set_variables(self):
-        set_variables_dialog = Set_Variables()
-        config_variables = Config.get()['user_variables']
-        dialog_variables = {} #Storing Widgets to get inputs easily
-        for i, variable in enumerate(config_variables):
-            input_field = QLineEdit(config_variables[variable])
-            dialog_variables[variable] = input_field
-            set_variables_dialog.ui.formLayout.insertRow(i, QLabel(variable + ':'), input_field)
-
-        if not set_variables_dialog.exec():
-            return
-
-        for variable in dialog_variables:
-            Config.set(["user_variables", variable], dialog_variables[variable].text())
+    def delete_hosts_with_no_services(self):
+        self.controller.delete_hosts_with_no_services()
 
     def button_start_screenshot_clicked(self):
         self.controller.start_or_pause_screenshotting(
@@ -356,8 +361,8 @@ class View:
             return
 
         if action == remove_action:
-            self.controller.delete_host(item)
             self.ui.ui.host_list.clearSelection()
+            self.controller.delete_host(item)
             self.close_right_panel_tabs()
         elif action == set_ip_action:
             new_ip, confirmed = QInputDialog.getText(None, "Change IP", "Set the IP address to :", text = host['ip'])
@@ -439,9 +444,8 @@ class View:
         proto = self.app_tabs['Ports'].item(item.row(), 0).text()
         description = self.app_tabs['Ports'].item(item.row(), 3).text()
 
-        top_menu, visible_actions = self.create_actions_from_port(proto, port)
+        top_menu = self.create_actions_from_port([host['host_id']], proto, port)
 
-        custom_command = top_menu.addAction("Custom command ...")
         copy_description = top_menu.addAction("Copy service description into clipboard")
         copy_description.setIcon(QIcon.fromTheme("edit-copy"))
         copy_uri = top_menu.addAction(f"Copy \"{host['ip']}:{port}\" into clipboard")
@@ -459,13 +463,10 @@ class View:
             clipboard = QApplication.clipboard()
             clipboard.setText(f"{host['ip']}:{port}")
 
-        if action == custom_command:
+        if action.data() == "QtRecon:STATIC_CUSTOM_COMMAND":
             self.launch_custom_command_dialog()
-
-        for program in visible_actions:
-            if program['text'] == action.text():
-                self.controller.new_job(program)
-                return
+        else:
+            self.controller.new_job(Config.get()['user_binaries'][action.data()])
 
     def right_click_in_hosts_for_port_table(self, qpoint: QPoint):
         item = self.ui.ui.hosts_for_port_table.indexAt(qpoint) # But we're not using this here, as multiple selection can occur
@@ -477,24 +478,20 @@ class View:
         hosts = dict()
         for index in self.ui.ui.hosts_for_port_table.selectedIndexes():
             itemData = self.ui.ui.hosts_for_port_table.model().itemData(index)
-            if itemData['id'] not in hosts.keys():
-                hosts[itemData['id']] = itemData
+            if itemData['host_id'] not in hosts.keys():
+                hosts[itemData['host_id']] = itemData
 
-        top_menu, visible_actions = self.create_actions_from_port(proto, port)
-        custom_command = top_menu.addAction("Custom command ...")
+        top_menu = self.create_actions_from_port(list(hosts.keys()), proto, port)
         action = top_menu.exec_(QCursor.pos())
 
         if not action:
             return
 
-        if action == custom_command:
+        if action.data() == "QtRecon:STATIC_CUSTOM_COMMAND":
             self.launch_custom_command_dialog()
-
-        for program in visible_actions:
-            if program['text'] == action.text():
-                for host in hosts:
-                    self.controller.new_job(program, hosts[host]['id'], port)
-                return
+        else:
+            for host in hosts:
+                self.controller.new_job(Config.get()['user_binaries'][action.data()], hosts[host]['host_id'], port)
 
     def right_click_in_creds_table(self, qpoint: QPoint):
         if self.ui.ui.work.currentIndex() == 0: # Calling from a host
@@ -518,22 +515,53 @@ class View:
                 top_menu.addSeparator()
         if self.ui.ui.work.currentIndex() == 0:
             insert_action = top_menu.addAction("Insert new credentials")
-            insert_action.setIcon(QIcon.fromTheme("document-new"))
+            insert_action.setIcon(QIcon.fromTheme("list-add"))
+            top_menu.addSeparator()
+            import_from_secretsdump_file_action = top_menu.addAction("Import from secretsdump output file")
+            import_from_secretsdump_file_action.setIcon(QIcon.fromTheme("document-open"))
+            import_from_user_password_file_action = top_menu.addAction("Import from user:password file")
+            import_from_user_password_file_action.setIcon(QIcon.fromTheme("document-open"))
+            import_from_user_hash_file_action = top_menu.addAction("Import from user:hash file")
+            import_from_user_hash_file_action.setIcon(QIcon.fromTheme("document-open"))
 
         action = top_menu.exec_(QCursor.pos())
         if not action:
             return
 
-        if self.ui.ui.work.currentIndex() == 0 and action == insert_action:
-            widget_calling.insertRow(widget_calling.rowCount())
-            new_id = self.controller.create_creds()
-            widget_calling.setItem(widget_calling.rowCount()-1, 0, QTableWidgetItem(str(new_id)))
+        if (self.ui.ui.work.currentIndex() == 0 and
+                (action == insert_action or
+                 action == import_from_secretsdump_file_action or
+                 action == import_from_user_password_file_action or
+                 action == import_from_user_hash_file_action)):
 
-            combo = QComboBox()
-            combo.addItems(["password", "hash", "ssh_key", "other"])
-            combo.setProperty('cred_id', str(new_id))
-            widget_calling.setCellWidget(widget_calling.rowCount()-1, 1, combo)
-            combo.currentTextChanged.connect(lambda new_type, qcombobox=combo: self.credentials_changed(qcombobox)) # signal in loop: https://stackoverflow.com/questions/46300229/connecting-multiples-signal-slot-in-a-for-loop-in-pyqt
+            if action == insert_action:
+                creds = [{'type': 'password', 'username':'', 'value':''}] # Create empty row
+            else:
+                filename, _ = QFileDialog.getOpenFileName(caption=action.text())
+                if not filename:
+                    return
+                if action == import_from_secretsdump_file_action:
+                    creds = self.controller.parse_creds_from_file('secretsdump', filename)
+                elif action == import_from_user_password_file_action:
+                    creds = self.controller.parse_creds_from_file('user:password', filename)
+                elif action == import_from_user_hash_file_action:
+                    creds = self.controller.parse_creds_from_file('user:hash', filename)
+
+            cred_types = ["password", "hash", "ssh_key", "other"]
+            for cred in creds:
+                widget_calling.insertRow(widget_calling.rowCount())
+                new_id = self.controller.create_creds()
+                widget_calling.setItem(widget_calling.rowCount() - 1, 0, QTableWidgetItem(str(new_id)))
+
+                combo = QComboBox()
+                combo.addItems(cred_types)
+                combo.setProperty('cred_id', str(new_id))
+                widget_calling.setCellWidget(widget_calling.rowCount() - 1, 1, combo)
+                combo.currentTextChanged.connect(lambda new_type, qcombobox=combo: self.credentials_changed(qcombobox))  # signal in loop: https://stackoverflow.com/questions/46300229/connecting-multiples-signal-slot-in-a-for-loop-in-pyqt
+
+                combo.setCurrentIndex(cred_types.index(cred['type']))
+                widget_calling.setItem(widget_calling.rowCount() - 1, 3, QTableWidgetItem(cred['username']))
+                widget_calling.setItem(widget_calling.rowCount() - 1, 4, QTableWidgetItem(cred['value']))
 
         elif action == clipboard_action:
             self.copy_selectedIndexes_to_clipboard(widget_calling.selectedIndexes())
@@ -556,11 +584,12 @@ class View:
                 for row in reversed(sorted(rows_to_delete)):
                     self.app_tabs['Credentials'].removeRow(int(row))
             if self.ui.ui.work.currentIndex() == 2:
-                self.reset_right_panel()
+                self.update_right_panel(self.ui.ui.host_list.currentIndex())
 
     def launch_custom_command_dialog(self):
         new_scan_dialog = Custom_Command()
         new_scan_dialog.ui.detached.stateChanged.connect(lambda checked: new_scan_dialog.in_terminal.setEnabled(checked))
+        new_scan_dialog.ui.command.setFocus()
 
         if new_scan_dialog.exec():
             command = new_scan_dialog.ui.command.text()
@@ -575,10 +604,10 @@ class View:
                 }
                 self.controller.new_job(program)
 
-    def create_actions_from_port(self, proto: str, port: str):
+    def create_actions_from_port(self, hosts_id: list, proto: str, port: str) -> QMenu:
         port_associations = Config.get()['ports_associations']
         user_binaries = Config.get()['user_binaries']
-        visible_actions = []  # Storing proposed actions here, rather than parsing AGAIN the conf ...
+        visible_actions = {}  # Storing proposed actions here, rather than parsing AGAIN the conf ...
 
         top_menu = QMenu(None)
 
@@ -589,17 +618,32 @@ class View:
                 if current_port == "any" and "any" not in Config.get()['ports_associations'][proto]:
                     continue
                 for program in port_associations[proto][current_port]:
-                    _ = top_menu.addAction(user_binaries[program]['text'])
-                    if 'icon' in user_binaries[program].keys():
+                    _ = top_menu.addAction(self.controller.replace_variables(user_binaries[program]['text'], host_id="" if len(hosts_id)>1 else hosts_id[0], port=port)) # TODO: must add check if entry is in port_association but not in user_binaries
+                    _.setData(program)
+                    if 'icon' in user_binaries[program].keys() and user_binaries[program]['icon']:
                         _.setIcon(QIcon(user_binaries[program]['icon']))
                     elif 'in_terminal' in user_binaries[program].keys() and user_binaries[program]['in_terminal']:
                         _.setIcon(QIcon.fromTheme("utilities-terminal"))
 
-                    visible_actions.append(user_binaries[program])
+                    visible_actions.update({program: user_binaries[program]})
 
             top_menu.addSeparator()
 
-        return top_menu, visible_actions
+        other_commands = top_menu.addMenu("Other commands ...")
+        custom_command = other_commands.addAction("Enter custom command manually")
+        other_commands.addSeparator()
+        custom_command.setData("QtRecon:STATIC_CUSTOM_COMMAND")  # hardcoded, must be checked when searching for selected option
+        for program in sorted(user_binaries.keys() - visible_actions.keys()):
+            _ = other_commands.addAction(self.controller.replace_variables(user_binaries[program]['text'], host_id="" if len(hosts_id)>1 else hosts_id[0], port=port))  # TODO: must add check if entry is in port_association but not in user_binaries
+            _.setData(program)
+            if 'icon' in user_binaries[program].keys():
+                _.setIcon(QIcon(user_binaries[program]['icon']))
+            elif 'in_terminal' in user_binaries[program].keys() and user_binaries[program]['in_terminal']:
+                _.setIcon(QIcon.fromTheme("utilities-terminal"))
+
+            visible_actions.update({program: user_binaries[program]})
+
+        return top_menu
 
 
     def open_db(self):
@@ -621,27 +665,30 @@ class View:
             self.controller.save_db(filename)
 
     def dialog_import_xml(self):
-        filename, _ = QFileDialog.getOpenFileName(caption='Import nmap XML output', filter='*.xml')
-        if filename:
-            self.controller.log('INFO', f"Importing Nmap results from {filename}")
-            new_hosts = self.controller.parse_nmap_data('xml', filename)
-
-            if Config.get()['user_prefs']['enable_autorun_on_xml_import']:
-                self.controller.autorun(new_hosts)
+        filenames, _ = QFileDialog.getOpenFileNames(caption='Import nmap XML output', filter='*.xml')
+        if filenames:
+            self.controller.start_parse_nmap_data(self, 'xml', filenames)
 
     def dialog_scan_host(self):
         new_scan_dialog = New_Scan()
+        new_scan_dialog.ui.target.setFocus()
+
         if new_scan_dialog.exec():
             target = new_scan_dialog.ui.target.text()
-            nmap_speed = new_scan_dialog.ui.nmap_speed.text()
-            ports = new_scan_dialog.ui.ports.text()
+            scan_type_regex = re.search(r'\((-[a-z][A-Z])\)', new_scan_dialog.ui.type.currentText())
+            scan_type = scan_type_regex.string[scan_type_regex.regs[1][0]:scan_type_regex.regs[1][1]]
             if target:
-                self.controller.new_scan(target, nmap_speed, ports,
-                                         new_scan_dialog.ui.skip_host_discovery.checkState(),
-                                         new_scan_dialog.ui.check_versions.checkState(),
-                                         new_scan_dialog.ui.launch_scripts.checkState(),
-                                         new_scan_dialog.ui.os_detection.checkState(),
-                                         new_scan_dialog.ui.tcp_and_udp.checkState())
+                self.controller.new_scan(target,
+                                         new_scan_dialog.ui.ports.text(),
+                                         scan_type,
+                                         new_scan_dialog.ui.nmap_speed.text(),
+                                         new_scan_dialog.ui.additional_args.text(),
+                                         new_scan_dialog.ui.skip_host_discovery.isChecked(),
+                                         new_scan_dialog.ui.check_versions.isChecked(),
+                                         new_scan_dialog.ui.launch_scripts.isChecked(),
+                                         new_scan_dialog.ui.os_detection.isChecked(),
+                                         new_scan_dialog.ui.tcp_and_udp.isChecked(),
+                                         new_scan_dialog.ui.save_as_default.isChecked())
 
     def update_notes(self):
         current_notes = self.app_tabs['Notes'].toHtml()
@@ -659,6 +706,10 @@ class View:
         tab = QTextEdit(content)
         tab.setReadOnly(True)
         tab_index = self.ui.ui.application_TabWidget.addTab(tab, title)
+
+        if self.controller.get_job(job_id) and self.controller.get_job(job_id).state()._value_ > 0:  # {0: 'Not running', 1: 'Starting', 2: 'Running'}
+            self.ui.ui.application_TabWidget.setTabIcon(tab_index, QIcon("icons/loading.gif"))
+
         self.app_tabs[tab_index] = {'widget': tab, 'job_id': job_id}
         self.link_job_and_widget(job_id, tab)
         return tab
@@ -671,6 +722,7 @@ class View:
 
     def close_right_panel_tabs(self):
         for i in range(self.ui.ui.application_TabWidget.count()):
+            self.ui.ui.application_TabWidget.setTabIcon(0, QIcon())
             self.ui.ui.application_TabWidget.removeTab(0)
         self.app_tabs = {}
 
@@ -697,6 +749,7 @@ class View:
 
         # Setup nmap tab
         self.app_tabs['Nmap'].setReadOnly(True)
+        self.app_tabs["Nmap"].setStyleSheet("background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};")
 
         # Setup creds tab
         self.app_tabs['Credentials'].setColumnCount(5)
@@ -720,7 +773,10 @@ class View:
         self.ui.ui.application_TabWidget.tabBar().tabButton(2, QTabBar.RightSide).resize(0, 0)
         self.ui.ui.application_TabWidget.tabBar().tabButton(3, QTabBar.RightSide).resize(0, 0)
 
-    def update_right_panel(self, host: QModelIndex):
+    def update_right_panel(self, host: QModelIndex | QItemSelection):
+        if isinstance(host, QItemSelection):  # Called from signal selectionChanged
+            host = host.indexes()[0]
+
         host_details = self.controller.get_selected_host(host)
         if not host_details:
             return
@@ -731,14 +787,15 @@ class View:
 
         ## Filling default tabs
         # Port listing
-        self.app_tabs['Ports'].setRowCount(len(host_details['ports'])) # Number of row to add (counting number of ports in both tcp and udp)
+        self.app_tabs['Ports'].setRowCount(len(host_details['ports']))  # Number of row to add (counting number of ports in both tcp and udp)
 
         row_count = 0
         for port in host_details['ports']:
-            self.app_tabs['Ports'].setItem(row_count, 0, QTableWidgetItem(port['proto']))
-            self.app_tabs['Ports'].setItem(row_count, 1, QTableWidgetItem(port['status']))
-            self.app_tabs['Ports'].setItem(row_count, 2, QTableWidgetItem(port['port']))
-            self.app_tabs['Ports'].setItem(row_count, 3, QTableWidgetItem(port['description']))
+            i = 0
+            for i, field in enumerate(['proto', 'status', 'port', 'description']):
+                qtablewidgetitem = QTableWidgetItem(port[field])
+                qtablewidgetitem.setToolTip(port[field])
+                self.app_tabs['Ports'].setItem(row_count, i, qtablewidgetitem)
 
             row_count += 1
 

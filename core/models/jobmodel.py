@@ -1,4 +1,5 @@
 import os
+import shlex
 
 from PySide6.QtCore import QAbstractTableModel, Qt, QProcess, QModelIndex, QProcessEnvironment
 from datetime import datetime
@@ -91,16 +92,16 @@ class JobModel(QAbstractTableModel):
 
         job_id = sqlite_cursor.lastrowid
 
+        if job_type == JobType.SCAN:
+            arg_nmap_output = ['-oX', f"{self.nmap_output_folder}/scan-{job_id}.xml",
+                     '-oN', f"{self.nmap_output_folder}/scan-{job_id}.nmap"]
+            args = arg_nmap_output + args
+
         if privileged and Config.get()['core_binaries']['graphical_su']['binary']:  # needs root
             args.insert(0, command)
             if Config.get()['core_binaries']['graphical_su']['args']:
                 args = Config.get()['core_binaries']['graphical_su']['args'] + args
             command = Config.get()['core_binaries']['graphical_su']['binary']
-
-        if job_type == JobType.SCAN:
-            arg_nmap_output = ['-oX', f"{self.nmap_output_folder}/scan-{job_id}.xml",
-                     '-oN', f"{self.nmap_output_folder}/scan-{job_id}.nmap"]
-            args += arg_nmap_output
 
         job = Job()
         env = QProcessEnvironment.systemEnvironment()
@@ -161,9 +162,9 @@ class JobModel(QAbstractTableModel):
 
             if status == "Success" and ret_code == 0:
                 self.controller.send_desktop_notification('Scan finished', 'Nmap scan finished successfully !')
-                new_hosts = self.controller.parse_nmap_data('xml', xml_file)
+                new_hosts = self.controller.start_parse_nmap_data(self, 'xml', [xml_file])
                 self.controller.log('INFO', f"Finished nmap scan ({len(new_hosts)} hosts)")
-                self.controller.parse_nmap_data('nmap', nmap_file)
+                self.controller.start_parse_nmap_data(self, 'nmap', nmap_file)
                 if Config.get()['user_prefs']['enable_autorun']:
                     self.controller.autorun(new_hosts)
                 self.controller.update_right_panel()
@@ -176,14 +177,14 @@ class JobModel(QAbstractTableModel):
                 os.remove(xml_file)
                 os.remove(nmap_file)
 
-    def new_scan(self, target: str, speed: str, ports: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool, tcp_and_udp: bool):
+    def new_scan(self, target: str, ports: str, type: str, speed: str, additional_args: str, skip_host_discovery: bool, version_probing: bool, default_scripts: bool, os_detection: bool, tcp_and_udp: bool):
         command_from_conf = Config.get()['core_binaries']['nmap']['binary']
         args_from_conf = Config.get()['core_binaries']['nmap']['args']
 
         args = [speed]
 
+        args.append(type)
         if tcp_and_udp:
-            args.append('-sS')
             args.append('-sU')
         if version_probing:
             args.append('-sV')
@@ -195,9 +196,12 @@ class JobModel(QAbstractTableModel):
             args.append('-O')
         if ports:
             args.append(f"-p{ports}")
+        if additional_args:
+            args += shlex.split(additional_args)
         args.append(target)
 
-        self.add_job(JobType.SCAN, os_detection, command_from_conf, args_from_conf + args, "", "")
+        privileged_scan_types = ['-sS', '-sA', '-sW', '-sM', '-sN', '-sF', 'sX']
+        self.add_job(JobType.SCAN, os_detection or type in privileged_scan_types or '-sU' in args, command_from_conf, args_from_conf + args, "", "")
 
     def new_attached_job(self, command: str, args: list, working_directory: str, host_id: int) -> int:
         # Tabbed program

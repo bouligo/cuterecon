@@ -18,13 +18,12 @@ Pipenv install:
 
 ```bash
 $ pipenv install
-$ cp conf.json.example conf.json
 $ pipenv run python qtrecon.py
 ```
 
 ## Configuration
 
-Configuration is a key element of QtRecon. The behavior of the tool, and all external commands can be customized that way. A single json contains all settings, and if many default values are unlikely to be changed, every pentester will have to create his own setup.
+Configuration is a key element of QtRecon. The behavior of the tool, and all external commands can be customized that way. A single json contains all settings, and if many default values are unlikely to be changed, every pentester will have to create his own setup. Everything is configurable from the graphical interface, however, editing the JSON directly is still a viable option.
 
 Most of the customization resides in the *user_binaries*, *port_associations*, *autorun*, and *user_prefs* sections :
 
@@ -33,9 +32,10 @@ Most of the customization resides in the *user_binaries*, *port_associations*, *
 - *ports_associations* : tell which program can be used on which network port
 - *autorun* : specifies which program on which port should be launched automatically upon discovery
 - *user_prefs* : options should be self-explanatory
-- "user_variables" : variables to be replaced automatically in commands
-- "snippets" : pieces of codes often used
-- "screenshots" : settings for the screenshot module
+- *user_variables* : variables to be replaced automatically in commands
+- *snippets* : pieces of codes often used
+- *screenshots* : settings for the screenshot module
+- *nmap_options* : default settings for nmap
 
 ### core_binaries
 
@@ -54,6 +54,7 @@ The following example defines the program *Firefox* to be launched as detached (
             "text": "Launch Firefox",
             "detached": true,
             "in_terminal": false,
+            "edit_before_launch": false,
             "binary": "/usr/bin/firefox",
             "icon": "/usr/share/icons/hicolor/256x256/apps/firefox.png",
             "args": ["-P", "tmp", "http://%%%IP%%%:%%%PORT%%%/"],
@@ -190,6 +191,16 @@ The final XML file created by root must be readable by your user, meaning that a
 
 ## Changelog
 
+v1.6:
+- Added different types of nmap scan
+- Import creds from the output of secretsdump, or user:password, user:hash
+- edit_before_launch variable for a program lets the user edit the command before executing it
+- Improved the "Import XML file" feature to import several .xml at once, and support large scan results
+- Edit menu has the new feature "Delete hosts with no service"
+- Configuration can be edited through the GUI (F10)
+- Network scan options can be saved as defaults
+- Various performance optimizations, bug fixes and QoL improvements
+
 v1.5:
 - Changed the Nmap parser to slightly better capture hostnames of hosts
 - Remembers current open folder when importing .xml or opening project files
@@ -225,13 +236,12 @@ v1.1:
 
 ## Todo list
 
+- [ ] Rename tab + icon when job is still running
 - [ ] Log changes of IP
-- [ ] Option to force edit command before an interactive run
-- [ ] Configure tools and configuration from GUI
 - [ ] better check of conf (port association and autorun, to user_binaries, and check all mandatory fields are there)
 - [ ] Add confirmation when data is about to be erased (same IP) ?
-- [ ] search for default icons in fs ?
 - [ ] notes with rich text ? Integrated cherrytree or equivalent ?
+- [ ] Teamserver ?
 
 ## bugs
 

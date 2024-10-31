@@ -165,6 +165,7 @@ if __name__ == '__main__':
             # If the number of screens (= screenshots) changed:
             if len(self.previous_screenshots) != len(QGuiApplication.screens()):
                 self.previous_screenshots = [None] * len(QGuiApplication.screens())
+                print(self.previous_screenshots)
             for i, screen in enumerate(QGuiApplication.screens()):
                 original_pixmap = screen.grabWindow(0)
                 if not original_pixmap.save(f"{screenshot_filename_prefix}-{i}.png"):
@@ -173,6 +174,8 @@ if __name__ == '__main__':
                     screenshot_files.append(f"{screenshot_filename_prefix}-{i}.png")
 
         else:
+            if len(self.previous_screenshots) == 0:
+                self.previous_screenshots = [None]  # Let's consider there is only one screen ?
             subprocess.run([chunk.replace('%%%OUTPUT%%%', f"{screenshot_filename_prefix}.png") for chunk in self.screenshot_cmd.split()])
             screenshot_files.append(f"{screenshot_filename_prefix}.png")
 
@@ -198,7 +201,7 @@ if __name__ == '__main__':
                 self.previous_screenshots[i] = current_screenshot
 
                 if self.convert_png_to_jpg:
-                    subprocess.run(['convert', screenshot_files[i], screenshot_files[i].removesuffix('.png') + '.jpg'])
+                    subprocess.run(['magick', screenshot_files[i], screenshot_files[i].removesuffix('.png') + '.jpg'])
                     os.remove(screenshot_files[i])
                     screenshot_files[i] = screenshot_files[i].removesuffix('.png') + '.jpg'
 

@@ -10,10 +10,10 @@ class Database:
 
     @staticmethod
     def init_DB():
-        Database.database = sqlite3.connect(':memory:')
+        Database.database = sqlite3.connect(':memory:', check_same_thread=False)
         Database.database.row_factory = lambda C, R: {c[0]: R[i] for i, c in enumerate(C.description)} # get dict output (https://stackoverflow.com/questions/3300464/how-can-i-get-dict-from-sqlite-query)
 
-        Database.database.execute("CREATE TABLE hosts(id integer primary key autoincrement not null, os text, ip, hostname, mac, highlight text, pwned integer not null default 0 check(pwned IN (0,1)) , nmap, notes)")
+        Database.database.execute("CREATE TABLE hosts(id integer primary key autoincrement not null, os text, ip UNIQUE, hostname, mac, highlight text, pwned integer not null default 0 check(pwned IN (0,1)) , nmap, notes)")
         Database.database.execute("CREATE TABLE hosts_ports(host_id integer, proto text, port, status text, description text)")
         Database.database.execute("CREATE TABLE hosts_tabs(id integer primary key autoincrement not null, host_id integer, job_id integer, title text, text)")
         Database.database.execute("CREATE TABLE hosts_creds(id INTEGER primary key autoincrement not null, host_id integer, type TEXT DEFAULT 'password', domain TEXT DEFAULT '', username TEXT DEFAULT '', password TEXT DEFAULT '')")
@@ -46,7 +46,7 @@ class Database:
             return f'database file "{filename}" not found.'
 
         try:
-            source = sqlite3.connect(filename)
+            source = sqlite3.connect(filename, check_same_thread=False)
         except sqlite3.OperationalError as e:
             return e
 
@@ -57,6 +57,11 @@ class Database:
         # Compatibility code : if table hosts_creds does not exist (QtRecon < 1.2), then create it
         if not Database.request("SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'hosts_creds'").fetchall():
             Database.database.execute("CREATE TABLE hosts_creds(id INTEGER primary key autoincrement not null, host_id integer, type TEXT DEFAULT 'password', domain TEXT DEFAULT '', username TEXT DEFAULT '', password TEXT DEFAULT '')")
+
+        # Compatibility code : if table hosts has not UNIQUE attribute on ip (QtRecon < 1.6), let's make it
+        # Has not the unique constraint and has not the index "patch"
+        if 'ip UNIQUE' not in Database.request("SELECT sql FROM sqlite_schema WHERE name='hosts';").fetchone()['sql'] and Database.request("SELECT sql FROM sqlite_schema where type='index';").fetchone() is None:
+            Database.request("CREATE UNIQUE INDEX host_ip ON hosts(ip);")
 
         Database.database.commit()
         Database.current_savefile = filename
