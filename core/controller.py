@@ -1,15 +1,16 @@
 import re
+import shutil
 import sys
 import os
 from datetime import datetime
 
-from PySide6.QtCore import QProcess, QModelIndex, QTimer
+from PySide6.QtCore import QProcess, QModelIndex, QTimer, Qt
 import html2text
 import ipaddress  # sort by IP
 import shlex
 
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon, QApplication, QHeaderView
+from PySide6.QtWidgets import QMessageBox, QInputDialog, QSystemTrayIcon, QApplication, QHeaderView, QProgressDialog
 
 from core.config import Config
 from core.models.credsmodel import CredsModel
@@ -21,11 +22,11 @@ from core.models.logmodel import LogModel
 from core.models.jobmodel import JobModel
 from utils.Screenshot import Screenshot, get_dir_size
 from utils.openDB import Popup_open_db
-from utils.nmapImporter import ProgressBar_update_hosts, Thread_import_xml_nmap
+from utils.nmapImporter import ProgressBar_import_hosts
 
 
 class Controller:
-    APPLICATION_VERSION = "1.6"
+    APPLICATION_VERSION = "1.7"
     autosave_timer = QTimer()
     progression_bar_timer = QTimer()
     screenshot_mgr = None
@@ -108,7 +109,7 @@ class Controller:
         '''
 
         if Database.request("select count(id) from hosts").fetchone()['count(id)']:
-            reply = QMessageBox.question(None, 'Confirmation', 'All unsaved data will be lost. Are you sure ?')
+            reply = QMessageBox.question(self.ui, 'Confirmation', 'All unsaved data will be lost. Are you sure ?')
 
             if reply == QMessageBox.No:
                 return False
@@ -134,7 +135,7 @@ class Controller:
 
         exception = Database.export_DB(filename)
         if exception:
-            QMessageBox.critical(None, 'Could not save current session', 'Exception occurred: ' + str(exception))
+            QMessageBox.critical(self.ui, 'Could not save current session', 'Exception occurred: ' + str(exception))
         else:
             self.log('RUNTIME', f"Saved current session to {filename}")
             self.ui.statusBar().showMessage('Saved database !', 15000)
@@ -255,14 +256,11 @@ class Controller:
 
         '''
         if filetype == 'xml':
-            if isinstance(caller, View):
-                self.popup_progressbar = ProgressBar_update_hosts(self, data)
-                self.popup_progressbar.show()
-            if isinstance(caller, JobModel):
-                parser = Thread_import_xml_nmap(data)
-                parser.import_xml_files()
-                self.finished_parse_nmap_data(parser.returning_host_ids)
-                return parser.returning_host_ids
+            if isinstance(caller, View):  # From the 'Import hosts' feature
+                ProgressBar_import_hosts(self, True, data)
+            if isinstance(caller, JobModel):  # From a scan
+                parser = ProgressBar_import_hosts(self, False, data)
+                self.finished_parse_nmap_data(self, parser.worker.returning_host_ids)
 
         elif filetype == 'nmap':
             nmap_parser = NmapParser(data)
@@ -275,15 +273,25 @@ class Controller:
             self.view.update_right_panel(self.ui.ui.host_list.currentIndex())
         self.update_hosts_for_port_panel()
 
-    def finished_parse_nmap_data(self, new_hosts):
-        self.log('INFO', f"Imported {len(new_hosts)} hosts from XML files")
+    def finished_parse_nmap_data(self, caller, hosts: dict):
+        """
+        :param caller: Controller | ProgressBar_import_hosts
+        :param hosts: {host_id: {'tcp': [], 'udp': []}   # tcp and udp are empty if new host (or if every service must be autorun'd again
+        :return:
+        """
         self.host_model.update_data()
         self.update_right_panel()
         self.update_hosts_for_port_panel()
         self.view.setup_ui()
 
-        if Config.get()['user_prefs']['enable_autorun_on_xml_import']:
-            self.autorun(new_hosts)
+        if isinstance(caller, Controller):
+            self.log('INFO', f"Finished nmap scan ({len(hosts.keys())} hosts)")
+            if Config.get()['user_prefs']['enable_autorun']:
+                self.autorun(hosts)
+        elif isinstance(caller, ProgressBar_import_hosts):
+            self.log('INFO', f"Imported {len(hosts.keys())} hosts from XML files")
+            if Config.get()['user_prefs']['enable_autorun_on_xml_import']:
+                self.autorun(hosts)
 
     def filter_hostlist(self, search_input: str):
         self.ui.ui.host_list.clearSelection()
@@ -296,21 +304,39 @@ class Controller:
     def filter_hosts_for_port_table(self, proto: str, port: str):
         self.hosts_for_port_model.filter_hostlist('port', f"{proto}/{port}")
 
-    def autorun(self, hosts_ids: list):
-        for host_id in hosts_ids:
-            host_details = self.host_model.get_host_details(host_id)
-            for port_details in host_details['ports']:
-                for port in ['any', port_details['port']]:
-                    if port_details['proto'] in Config.get()['autorun'] and port in Config.get()['autorun'][port_details['proto']]:
-                        for program in Config.get()['autorun'][port_details['proto']][port]:
-                            self.log('AUTORUN', f"Running {Config.get()['user_binaries'][program]['name']} on {port_details['proto']}://{host_details['ip']}:{port}")
-                            self.new_job(Config.get()['user_binaries'][program], host_details['id'], port)
+    def autorun(self, new_hosts: dict):
+        """
+
+        :param new_hosts: {host_id: {'tcp': [], 'udp': []}   # tcp and udp are empty if new host (or if every service must be autorun'd again
+        :return:
+        """
+        for new_host in new_hosts.keys():
+            host_details = self.host_model.get_host_details(new_host)
+            must_autorun_everything = not (len(new_hosts[new_host]['tcp'])!=0 or len(new_hosts[new_host]['udp'])!=0)
+            for proto in ['tcp', 'udp']:
+                if proto not in Config.get()['autorun'].keys():
+                    continue
+                for port in Config.get()['autorun'][proto]:
+                    if port.lower() == 'any':
+                        if must_autorun_everything:  # let's parse data from database (host_details)
+                            services_to_autorun = [_['port'] for _ in host_details['ports'] if _['proto'] == proto]
+                        else:  # let's parse only new ports (new_host)
+                            services_to_autorun = new_hosts[new_host][proto]
+                        for service in services_to_autorun:
+                            for program in Config.get()['autorun'][proto][port]:
+                                self.log('AUTORUN', f"Running {Config.get()['user_binaries'][program]['name']} on {proto}://{host_details['ip']}:{service}")
+                                self.new_job(Config.get()['user_binaries'][program], host_details['id'], service)
+                    else:
+                        if (port in new_hosts[new_host][proto] and not must_autorun_everything) or (must_autorun_everything and [_ for _ in host_details['ports'] if _['port'] == port]):
+                            for program in Config.get()['autorun'][proto][port]:
+                                self.log('AUTORUN', f"Running {Config.get()['user_binaries'][program]['name']} on {proto}://{host_details['ip']}:{port}")
+                                self.new_job(Config.get()['user_binaries'][program], host_details['id'], port)
 
     def log(self, category: str, data: str):
         if category not in ['RUNTIME', 'INFO', 'WARNING', 'CRITICAL', 'AUTORUN']:
             category = 'UNKNOWN'
         if category in ['CRITICAL', 'UNKNOWN']:
-            QMessageBox.critical(None, 'Error', data)
+            QMessageBox.critical(self.ui, 'Error', data)
         self.log_model.add_log([category, data])
 
     def search_string_in_db_hosts(self, search_term: str, ip: str = "") -> list:
@@ -392,7 +418,6 @@ class Controller:
 
         return output_string
 
-
     def new_job(self, program: dict, host_id: str = "", port: str = ""):
         host_dst = self.host_model.get_host_details(host_id) if host_id else self.get_selected_host()
         port_dst = port if port else self.get_selected_port()
@@ -404,15 +429,12 @@ class Controller:
 
             # Check if creds are needed and available for this host and command
             creds_from_database = []
-            if any(item in ' '.join(program['args']) for item in ['%%%DOMAIN%%%', '%%%USERNAME%%%']):
-                creds_from_database += Database.request("SELECT * FROM hosts_creds WHERE host_id = ?", (host_dst['id'], )).fetchall()
-            else:
-                creds_types_available = [row['type'] for row in Database.request("SELECT DISTINCT type FROM hosts_creds WHERE host_id = ?", (host_dst['id'],)).fetchall()]
-                for cred_type_available in creds_types_available:
-                        if f"%%%{cred_type_available.upper()}%%%" in  ' '.join(program['args']):
-                            creds_from_database += Database.request("SELECT * FROM hosts_creds WHERE host_id = ? AND type = ?", (host_dst['id'], cred_type_available)).fetchall()
+            creds_types = [row['type'] for row in Database.request("SELECT DISTINCT type FROM hosts_creds").fetchall()]
+            for creds_type in creds_types:
+                    if f"%%%{creds_type.upper()}%%%" in  ' '.join(program['args']):
+                        creds_from_database += Database.request("SELECT * FROM hosts_creds, hosts WHERE (host_id = ? AND type = ?) OR (hosts.id = hosts_creds.host_id AND (lower(domain) != 'localhost' and lower(domain) != lower(hosts.hostname)) AND type = ?)", (host_dst['id'], creds_type, creds_type)).fetchall()
             if creds_from_database:
-                reply = QMessageBox.question(None, 'Valid credentials are available', f"Valid credentials are available to use against this target. Do you want to use them ?")
+                reply = QMessageBox.question(self.ui, 'Valid credentials are available', f"Valid credentials are available to use against this target. Do you want to use them ?")
                 if reply == QMessageBox.Yes:
                     credtype, domain, username, password = self.view.select_credentials_dialog(creds_from_database)
 
@@ -422,7 +444,7 @@ class Controller:
                 re_uncaught_user_variables = re.findall('%{3}[a-zA-Z-_]+%{3}', args[i])
                 all_uncaught_user_variables = {}
                 for uncaught_user_variable in re_uncaught_user_variables:
-                    reply = QInputDialog.getText(None, 'Unset variable',
+                    reply = QInputDialog.getText(self.ui, 'Unset variable',
                                                  f"While trying to launch {program['name']} on {host_dst['ip']}:{port_dst}, the variable {uncaught_user_variable} was not set. You can specify it now:")
                     if reply[1]:
                         args[i] = args[i].replace(f"{uncaught_user_variable}", reply[0])
@@ -436,7 +458,7 @@ class Controller:
             working_directory = None
 
         if 'edit_before_launch' in program.keys() and program['edit_before_launch']:
-            reply, validated = QInputDialog.getText(None, 'Edit command', f"This program is set to be reviewed before launching. Here is the command that will be executed:", text=program['binary'] + ' '+' '.join(args))
+            reply, validated = QInputDialog.getText(self.ui, 'Edit command', f"This program is set to be reviewed before launching. Here is the command that will be executed:", text=program['binary'] + ' '+' '.join(args))
             if reply and validated:
                 program['binary'], *args = shlex.split(reply)
             else:
@@ -455,7 +477,7 @@ class Controller:
                 title = title.replace(uncaught_user_variable[0], uncaught_user_variable[1])
 
             job_id = self.start_attached_job(program['binary'], args, working_directory, host_dst['ip'])
-            self.host_model.create_external_tab(host_dst['id'], title, job_id)
+            self.host_model.create_external_tab(host_dst['id'], title, shlex.join([program['binary']] + args), job_id)
             if self.get_selected_host():
                 if host_dst and self.get_selected_host()['ip'] == host_dst['ip']:
                     self.view.new_tab(title, job_id)
@@ -497,35 +519,56 @@ class Controller:
             engine = "external"
 
         if engine == "external" and not screenshot_cmd:
-            QMessageBox.critical(None, "Error", "Screenshot command line is required !")
+            QMessageBox.critical(self.ui, "Error", "Screenshot command line is required !")
             return
         if not work_folder:
-            QMessageBox.critical(None, "Error", "Temporary work folder is required !")
+            QMessageBox.critical(self.ui, "Error", "Temporary work folder is required !")
             return
         if not os.path.exists(work_folder):
             try:
                 os.mkdir(work_folder)
             except Exception as e:
-                QMessageBox.critical(None, "Error", "Temporary work folder does not exist and cannot be created !\n"+str(e))
+                QMessageBox.critical(self.ui, "Error", "Temporary work folder does not exist and cannot be created !\n"+str(e))
                 return
         if not os.access(work_folder, os.W_OK):
-            QMessageBox.critical(None, "Error", "Temporary work folder is not writable !")
+            QMessageBox.critical(self.ui, "Error", "Temporary work folder is not writable !")
             return
         if not dst_folder:
-            QMessageBox.critical(None, "Error", "Final destination folder is required !")
+            QMessageBox.critical(self.ui, "Error", "Final destination folder is required !")
             return
         if not os.path.exists(dst_folder):
             try:
                 os.mkdir(dst_folder)
             except Exception as e:
-                QMessageBox.critical(None, "Error", "Final work folder does not exist and cannot be created !\n"+str(e))
+                QMessageBox.critical(self.ui, "Error", "Final work folder does not exist and cannot be created !\n"+str(e))
                 return
         if not os.access(dst_folder, os.W_OK):
-            QMessageBox.critical(None, "Error", "Final work folder is not writable !")
+            QMessageBox.critical(self.ui, "Error", "Final work folder is not writable !")
             return
-        if check_locked_screen and (not check_locked_screen_cmd or not check_locked_screen_cmd_result):
-            QMessageBox.critical(None, "Error", "Please specify command to check if the screen is locked, and the expected output.")
-            return
+        if check_locked_screen:
+            if not check_locked_screen_cmd or not check_locked_screen_cmd_result:
+                QMessageBox.critical(self.ui, "Error", "Please specify command to check if the screen is locked, and the expected output.")
+                return
+            try:
+                command, *args = shlex.split(check_locked_screen_cmd)
+            except ValueError:
+                QMessageBox.critical(self.ui, "Error", "Command to check locked screen is invalid. Please check the syntax and quotes if any.")
+                return
+            binary_path = shutil.which(command)
+            if binary_path is None or shutil.which(binary_path) is None:
+                QMessageBox.critical(self.ui, "Error",f"Command <b>{command}</b>, used to check locked screen, cannot be found on this system.")
+                return
+            elif not os.access(binary_path, os.X_OK):
+                QMessageBox.critical(self.ui, "Error",f"Command <b>{command}</b>, used to check locked screen, is not executable.")
+                return
+        if convert_png_to_jpg:
+            binary_path = shutil.which("magick")
+            if binary_path is None or shutil.which(binary_path) is None:
+                QMessageBox.critical(self.ui, "Error",f"Command <b>magick</b>, used to convert images from png to jpg, cannot be found on this system.")
+                return
+            elif not os.access(binary_path, os.X_OK):
+                QMessageBox.critical(self.ui, "Error",f"Command <b>magick</b>, used to convert images from png to jpg, is not executable.")
+                return
 
         # Modify configuration on disk with current settings
         Config.set(['screenshots', 'engine'], engine)
@@ -608,7 +651,7 @@ class Controller:
                     if 'stderr' in output.keys():
                         self.send_desktop_notification('Error while processing screenshot file', output['stderr'])
             except Exception as e:
-                QMessageBox.critical(None, 'Errors while creating archive file', 'An error occured when compressing screenshots into an archive file : ' + str(e))
+                QMessageBox.critical(self.ui, 'Errors while creating archive file', 'An error occured when compressing screenshots into an archive file : ' + str(e))
 
             folder_size = get_dir_size(self.screenshot_mgr.folder)
             archive_size = int(os.stat(self.screenshot_mgr.archive).st_size)
@@ -619,7 +662,7 @@ class Controller:
 
     def send_desktop_notification(self, title: str, message: str):
         system_icon = QSystemTrayIcon()
-        system_icon.setIcon(QIcon("icons/icon.ico"))
+        system_icon.setIcon(QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/icon.ico"))
         system_icon.setVisible(True)
         system_icon.showMessage(title, message, msecs=10000)
         system_icon.setVisible(False)

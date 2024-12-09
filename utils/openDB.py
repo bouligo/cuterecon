@@ -1,3 +1,6 @@
+import os
+import sys
+
 from PySide6.QtCore import QThread, Signal, QObject, QSize, Qt
 from PySide6.QtGui import QMovie
 from PySide6.QtWidgets import QLabel, QHBoxLayout, QMessageBox, QFrame
@@ -38,7 +41,7 @@ class Popup_open_db(QFrame):
     def __init__(self, caller, filename: str):
         super().__init__()
         self.icon = QLabel()
-        movie = QMovie("icons/loading.gif")
+        movie = QMovie(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/loading.gif")
         movie.setScaledSize(QSize(40, 40))
         self.icon.setMovie(movie)
         movie.start()

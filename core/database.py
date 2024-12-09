@@ -15,7 +15,7 @@ class Database:
 
         Database.database.execute("CREATE TABLE hosts(id integer primary key autoincrement not null, os text, ip UNIQUE, hostname, mac, highlight text, pwned integer not null default 0 check(pwned IN (0,1)) , nmap, notes)")
         Database.database.execute("CREATE TABLE hosts_ports(host_id integer, proto text, port, status text, description text)")
-        Database.database.execute("CREATE TABLE hosts_tabs(id integer primary key autoincrement not null, host_id integer, job_id integer, title text, text)")
+        Database.database.execute("CREATE TABLE hosts_tabs(id integer primary key autoincrement not null, host_id integer, job_id integer, cmdline text, title text, text)")
         Database.database.execute("CREATE TABLE hosts_creds(id INTEGER primary key autoincrement not null, host_id integer, type TEXT DEFAULT 'password', domain TEXT DEFAULT '', username TEXT DEFAULT '', password TEXT DEFAULT '')")
         Database.database.execute("CREATE TABLE logs(id integer primary key autoincrement not null, date, type, log)")
         Database.database.execute("CREATE TABLE jobs(id integer primary key autoincrement not null, host_id integer, type, timestamp, state, command)")
@@ -61,7 +61,14 @@ class Database:
         # Compatibility code : if table hosts has not UNIQUE attribute on ip (QtRecon < 1.6), let's make it
         # Has not the unique constraint and has not the index "patch"
         if 'ip UNIQUE' not in Database.request("SELECT sql FROM sqlite_schema WHERE name='hosts';").fetchone()['sql'] and Database.request("SELECT sql FROM sqlite_schema where type='index';").fetchone() is None:
-            Database.request("CREATE UNIQUE INDEX host_ip ON hosts(ip);")
+            Database.database.execute("CREATE UNIQUE INDEX host_ip ON hosts(ip);")
+
+        # Compatibility code : if table hosts_tabs has no cmdline field (QtRecon < 1.7), let's create it
+        if Database.request("SELECT COUNT(*) as count FROM pragma_table_info('hosts_tabs') WHERE name='cmdline'").fetchone()['count'] == 0:
+            Database.database.execute("ALTER TABLE hosts_tabs RENAME TO hosts_tabs_temp;")
+            Database.database.execute("CREATE TABLE hosts_tabs(id integer primary key autoincrement not null, host_id integer, job_id integer, cmdline text, title text, text)")
+            Database.database.execute("INSERT INTO hosts_tabs(id, host_id, job_id, title, text) SELECT id, host_id, job_id, title, text FROM hosts_tabs_temp")
+            Database.database.execute("DROP TABLE hosts_tabs_temp;")
 
         Database.database.commit()
         Database.current_savefile = filename

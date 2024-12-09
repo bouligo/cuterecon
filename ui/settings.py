@@ -1,7 +1,9 @@
+import os
 import random
 import shlex
 import string
 import json
+import sys
 
 from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QIcon, QRegularExpressionValidator
@@ -23,8 +25,8 @@ class Settings(QDialog):
     user_variables = {}
     user_binaries_tab_visited_at_least_once = user_variables_tab_visited_at_least_once = False  # To handle automatic scroll for user binaries
 
-    def __init__(self):
-        super(Settings, self).__init__()
+    def __init__(self, parent):
+        super(Settings, self).__init__(parent)
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
 
@@ -36,7 +38,7 @@ class Settings(QDialog):
 
     def accept(self):
         # Check values in tabs
-        if self.check_mandatory_fields(True):
+        if self.check_mandatory_fields(True) == False:
             return
 
         # Paths
@@ -132,12 +134,52 @@ class Settings(QDialog):
         # Close the window as expected
         super(Settings, self).accept()
 
-    def check_mandatory_fields(self, force_all_checks=False):
+    def check_mandatory_fields(self, force_all_checks=False) -> bool:
         """
 
         :param force_all_checks: Checks tab 2 and 4, regardless of the current tab
-        :return:
+        :return: True if everything went right ; False otherwise
         """
+
+        # Paths
+        if force_all_checks or self.ui.tabs.currentIndex() != 0:
+            if os.path.isdir(self.ui.nmap_output_dir.text()):
+                try:
+                    filehandle = open(self.ui.nmap_output_dir.text() + "/write-check", 'w')
+                except IOError:
+                    QMessageBox.warning(self, "Error in path configuration", f"Work folder {self.ui.nmap_output_dir.text()}is not writable. Specify another path in the configuration.")
+                    self.ui.nmap_output_dir.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
+                    self.ui.nmap_output_dir.setFocus()
+                    self.ui.tabs.setCurrentIndex(0)
+                    return False
+            else:
+                try:
+                    os.mkdir(self.ui.nmap_output_dir.text())
+                except FileExistsError:
+                    pass
+                except PermissionError:
+                    QMessageBox.warning(self, "Error in path configuration", f"Work folder {self.ui.nmap_output_dir.text()} doesn't exist on this filesystem and cannot be created (permission issue). Specify another path in the configuration.")
+                    self.ui.nmap_output_dir.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
+                    self.ui.nmap_output_dir.setFocus()
+                    self.ui.tabs.setCurrentIndex(0)
+                    return False
+
+        # Code binaries
+        if force_all_checks or self.ui.tabs.currentIndex() != 1:
+            # Clean red backgrounds
+            for widget in [self.ui.core_binaries_nmap_cmd, self.ui.core_binaries_terminal_cmd, self.ui.core_binaries_graphicalsu_cmd]:
+                widget.setStyleSheet("")
+
+            for widget in [self.ui.core_binaries_nmap_cmd, self.ui.core_binaries_terminal_cmd, self.ui.core_binaries_graphicalsu_cmd]:
+                try:
+                    shlex.split(widget.text())
+                except ValueError:
+                    QMessageBox.warning(self, "Error in core binaries configuration", "There was a problem parsing the configuration of core binaries. Please check that quotes are matching in your inputs")
+                    widget.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
+                    widget.setFocus()
+                    self.ui.tabs.setCurrentIndex(1)
+                    return False
+
         # User binaries
         if force_all_checks or self.ui.tabs.currentIndex() != 2:
 
@@ -150,7 +192,7 @@ class Settings(QDialog):
             # Checking tab title (3), text menu (5) and binary path (7)
             for j in [3, 5, 7]:
                 if not all([self.layout_user_binaries.itemAt(i).widget().layout().itemAt(j).widget().text() for i in range(self.layout_user_binaries.count())]):
-                    QMessageBox.warning(None, "Missing user binary information", "A mandatory information about a user binary is empty. Please set tab title, menu text and binary path to all entries.")
+                    QMessageBox.warning(self, "Missing user binary information", "A mandatory information about a user binary is empty. Please set tab title, menu text and binary path to all entries.")
                     self.ui.tabs.setCurrentIndex(2)
                     for i in range(self.layout_user_binaries.count()):
                         widget = self.layout_user_binaries.itemAt(i).widget().layout().itemAt(j).widget()
@@ -158,7 +200,21 @@ class Settings(QDialog):
                             self.ui.tab_user_binaries_scrollArea.ensureWidgetVisible(widget)
                             widget.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
                             widget.setFocus()
-                    return 1
+                    return False
+
+            # Checking that programs args can be parsed
+            for i in range(self.layout_user_binaries.count()):
+                frame = self.layout_user_binaries.itemAt(i).widget()
+                widget = frame.layout().itemAt(9).widget()
+                try:
+                    shlex.split(widget.text())
+                except ValueError:
+                    QMessageBox.critical(self, "Command arguments invalid", f"Arguments specified for command {frame.layout().itemAt(3).widget().text()} are invalid. Check the syntax and quotes if any.")
+                    widget.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
+                    widget.setFocus()
+                    self.ui.tab_user_binaries_scrollArea.ensureWidgetVisible(widget)
+                    self.ui.tabs.setCurrentIndex(2)
+                    return False
 
             # Setting internal variable
             self.user_binaries = {}
@@ -191,7 +247,7 @@ class Settings(QDialog):
 
             # Checking variables names
             if not all([self.layout_user_variables.itemAt(i).layout().itemAt(0).widget().text() for i in range(self.layout_user_variables.count())]):
-                QMessageBox.warning(None, "Missing variable name", "A variable name is empty. Please give all your variables a name.")
+                QMessageBox.warning(self, "Missing variable name", "A variable name is empty. Please give all your variables a name.")
                 self.ui.tabs.setCurrentIndex(4)
                 for i in range(self.layout_user_variables.count()):
                     widget = self.layout_user_variables.itemAt(i).layout().itemAt(0).widget()
@@ -199,7 +255,7 @@ class Settings(QDialog):
                         self.ui.tab_user_variables_scrollArea.ensureWidgetVisible(widget)
                         widget.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
                         widget.setFocus()
-                return 1
+                return False
 
             # Setting internal variable
             self.user_variables = {}
@@ -208,11 +264,15 @@ class Settings(QDialog):
                 value = self.layout_user_variables.itemAt(i).layout().itemAt(1).widget().text()
                 self.user_variables[key] = {'value': value, 'layout': self.layout_user_variables.itemAt(i).layout()}
 
+        return True
+
     def tab_changed(self):
         # TODO: check mandatory fields in tab 2 and 4
         self.check_mandatory_fields()
 
         if self.ui.tabs.currentIndex() == 2:
+            if not self.user_binaries_tab_visited_at_least_once:
+                self.ui.verticalLayout_4.itemAt(1).widget().setFocus()
             self.user_binaries_tab_visited_at_least_once = True
         if self.ui.tabs.currentIndex() == 4:
             self.user_variables_tab_visited_at_least_once = True
@@ -256,6 +316,7 @@ class Settings(QDialog):
         search_field.setClearButtonEnabled(True)
         search_field.addAction(QIcon(QIcon.fromTheme(QIcon.ThemeIcon.SystemSearch)), QLineEdit.LeadingPosition)
         search_field.setPlaceholderText("Search...")
+        search_field.setFocus()
         search_field.textChanged.connect(self.user_binaries_search_field_changed)
         self.ui.verticalLayout_4.addWidget(search_field)
 
@@ -471,4 +532,4 @@ class Settings(QDialog):
     def user_binaries_search_field_changed(self, search_input: str):
         for i in range(self.layout_user_binaries.count()):
             frame = self.layout_user_binaries.itemAt(i).widget()
-            frame.setVisible(any([search_input in form_input for form_input in [frame.layout().itemAt(3).widget().text(), frame.layout().itemAt(5).widget().text(), frame.layout().itemAt(7).widget().text()]]))
+            frame.setVisible(any([search_input.lower() in form_input.lower() for form_input in [frame.layout().itemAt(3).widget().text(), frame.layout().itemAt(5).widget().text(), frame.layout().itemAt(7).widget().text()]]))

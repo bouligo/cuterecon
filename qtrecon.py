@@ -1,3 +1,4 @@
+import os
 import sys
 
 from PySide6.QtGui import QIcon
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
 
-    appIcon = QIcon("icons/icon.ico")
+    appIcon = QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/icon.ico")
     app.setWindowIcon(appIcon)
 
     window = MainWindow()

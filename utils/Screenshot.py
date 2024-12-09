@@ -165,7 +165,6 @@ if __name__ == '__main__':
             # If the number of screens (= screenshots) changed:
             if len(self.previous_screenshots) != len(QGuiApplication.screens()):
                 self.previous_screenshots = [None] * len(QGuiApplication.screens())
-                print(self.previous_screenshots)
             for i, screen in enumerate(QGuiApplication.screens()):
                 original_pixmap = screen.grabWindow(0)
                 if not original_pixmap.save(f"{screenshot_filename_prefix}-{i}.png"):

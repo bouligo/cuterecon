@@ -3,7 +3,6 @@ import shlex
 
 from PySide6.QtCore import QAbstractTableModel, Qt, QProcess, QModelIndex, QProcessEnvironment
 from datetime import datetime
-import threading
 from core.database import Database
 
 from core.config import Config
@@ -13,7 +12,6 @@ from utils.job import Job, JobType
 class JobModel(QAbstractTableModel):
     def __init__(self, parent, controller):
         QAbstractTableModel.__init__(self, parent)
-        self.semaphore = threading.Semaphore()
         self.ui = parent
         self.controller = controller
         self.jobs = []
@@ -122,7 +120,6 @@ class JobModel(QAbstractTableModel):
             job.setStandardInputFile(QProcess.nullDevice())
         job.start(command, args)
         self.emit_refresh()
-        self.semaphore.release()
         self.update_data()
         return job_id
 
@@ -162,11 +159,8 @@ class JobModel(QAbstractTableModel):
 
             if status == "Success" and ret_code == 0:
                 self.controller.send_desktop_notification('Scan finished', 'Nmap scan finished successfully !')
-                new_hosts = self.controller.start_parse_nmap_data(self, 'xml', [xml_file])
-                self.controller.log('INFO', f"Finished nmap scan ({len(new_hosts)} hosts)")
+                self.controller.start_parse_nmap_data(self, 'xml', [xml_file])
                 self.controller.start_parse_nmap_data(self, 'nmap', nmap_file)
-                if Config.get()['user_prefs']['enable_autorun']:
-                    self.controller.autorun(new_hosts)
                 self.controller.update_right_panel()
                 self.controller.update_hosts_for_port_panel()
             else:

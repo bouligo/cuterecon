@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 
@@ -20,6 +21,7 @@ from ui.about import About
 from ui.credentials import Credentials_dialog
 from ui.settings import Settings
 from utils.QNoteTextEdit import QNoteTextEdit
+from utils.job import Job
 
 
 class View:
@@ -196,7 +198,7 @@ class View:
         self.ui.ui.button_save_screenshot.clicked.connect(self.button_save_screenshots_clicked)
 
     def about(self):
-        about_dialog = About()
+        about_dialog = About(self.ui)
         about_dialog.setWindowTitle("About this program")
         about_dialog.ui.text.setText(f"""<h1>QtRecon {self.controller.APPLICATION_VERSION}</h1>
         <p>2023-2024, licenced under Creative Commons <i>CC-BY</i></p>
@@ -210,12 +212,13 @@ class View:
         about_dialog.exec()
 
     def dialog_settings(self):
-        settings_dialog = Settings()
+        settings_dialog = Settings(self.ui)
         if settings_dialog.exec():
             self.controller.reload_conf()
 
     def dialog_search(self):
-        search_dialog = Search()
+        search_dialog = Search(self.ui)
+        search_dialog.setWindowTitle("Search in notes")
         search_dialog.ui.search_button.clicked.connect(lambda: self.search(search_dialog))
         search_dialog.ui.host_list.currentRowChanged.connect(lambda: self.search_in_host(search_dialog))
         search_dialog.exec()
@@ -255,7 +258,7 @@ class View:
         self.controller.stop_screenshotting()
 
     def select_credentials_dialog(self, credentials: list) -> (str, str, str, str):
-        select_credentials_dialog = Credentials_dialog()
+        select_credentials_dialog = Credentials_dialog(self.ui)
         for i, credential in enumerate(credentials):
             select_credentials_dialog.ui.creds_table.insertRow(select_credentials_dialog.ui.creds_table.rowCount())
             select_credentials_dialog.ui.creds_table.setItem(i, 0, QTableWidgetItem(credential['type']))
@@ -365,7 +368,7 @@ class View:
             self.controller.delete_host(item)
             self.close_right_panel_tabs()
         elif action == set_ip_action:
-            new_ip, confirmed = QInputDialog.getText(None, "Change IP", "Set the IP address to :", text = host['ip'])
+            new_ip, confirmed = QInputDialog.getText(self.ui, "Change IP", "Set the IP address to :", text = host['ip'])
             if confirmed:
                 try:
                     ipaddress.IPv4Address(new_ip) # fails if not a valid IP address
@@ -373,14 +376,14 @@ class View:
                         self.controller.change_host_ip(item, new_ip)
                         self.close_right_panel_tabs()
                 except ipaddress.AddressValueError:
-                    QMessageBox.critical(None, "Cannot change IP", f"Cannot change ip address of \"{host['ip']}\" to \"{new_ip}\"")
+                    QMessageBox.critical(self.ui, "Cannot change IP", f"Cannot change ip address of \"{host['ip']}\" to \"{new_ip}\"")
         elif action == set_hostname_action:
-            new_hostname, confirmed = QInputDialog.getText(None, "Set hostname", "Set the hostname to :", text = host['hostname'])
+            new_hostname, confirmed = QInputDialog.getText(self.ui, "Set hostname", "Set the hostname to :", text = host['hostname'])
             if confirmed:
                 self.controller.change_host_hostname(item, new_hostname)
                 # self.close_right_panel_tabs()
         elif action == set_os_action:
-            new_os, confirmed = QInputDialog.getItem(None, "Set Operating System", "Set the OS to :", ["Windows", "Linux", "IOS", "Unknown"], editable=False)
+            new_os, confirmed = QInputDialog.getItem(self.ui, "Set Operating System", "Set the OS to :", ["Windows", "Linux", "IOS", "Unknown"], editable=False)
             if confirmed:
                 self.controller.change_host_os(item, new_os)
                 # self.close_right_panel_tabs()
@@ -537,7 +540,7 @@ class View:
             if action == insert_action:
                 creds = [{'type': 'password', 'username':'', 'value':''}] # Create empty row
             else:
-                filename, _ = QFileDialog.getOpenFileName(caption=action.text())
+                filename, _ = QFileDialog.getOpenFileName(self.ui, caption=action.text())
                 if not filename:
                     return
                 if action == import_from_secretsdump_file_action:
@@ -587,20 +590,20 @@ class View:
                 self.update_right_panel(self.ui.ui.host_list.currentIndex())
 
     def launch_custom_command_dialog(self):
-        new_scan_dialog = Custom_Command()
-        new_scan_dialog.ui.detached.stateChanged.connect(lambda checked: new_scan_dialog.in_terminal.setEnabled(checked))
-        new_scan_dialog.ui.command.setFocus()
+        custom_command_dialog = Custom_Command()
+        custom_command_dialog.ui.detached.stateChanged.connect(lambda checked: custom_command_dialog.in_terminal.setEnabled(checked))
+        custom_command_dialog.ui.command.setFocus()
 
-        if new_scan_dialog.exec():
-            command = new_scan_dialog.ui.command.text()
+        if custom_command_dialog.show():
+            command = custom_command_dialog.ui.command.text()
 
             if command:
                 program = {
                     'name': command.split()[0],
                     'binary': command.split()[0],
                     'args': command.split()[1:],
-                    'detached': new_scan_dialog.ui.detached.checkState() == Qt.CheckState.Checked,
-                    'in_terminal': new_scan_dialog.ui.in_terminal.checkState() == Qt.CheckState.Checked
+                    'detached': custom_command_dialog.ui.detached.checkState() == Qt.CheckState.Checked,
+                    'in_terminal': custom_command_dialog.ui.in_terminal.checkState() == Qt.CheckState.Checked
                 }
                 self.controller.new_job(program)
 
@@ -647,7 +650,7 @@ class View:
 
 
     def open_db(self):
-        filename, _ = QFileDialog.getOpenFileName(caption='Restore saved session', filter='*.sqlite')
+        filename, _ = QFileDialog.getOpenFileName(self.ui, caption='Restore saved session', filter='*.sqlite')
         if filename:
             self.controller.open_db(filename)
 
@@ -658,19 +661,19 @@ class View:
             self.controller.save_db()
 
     def save_as_db(self):
-        filename, _ = QFileDialog.getSaveFileName(caption='Save current session', filter='*.sqlite')
+        filename, _ = QFileDialog.getSaveFileName(self.ui, caption='Save current session', filter='*.sqlite')
         if filename:
             if not filename.endswith('.sqlite'):
                 filename += '.sqlite'
             self.controller.save_db(filename)
 
     def dialog_import_xml(self):
-        filenames, _ = QFileDialog.getOpenFileNames(caption='Import nmap XML output', filter='*.xml')
+        filenames, _ = QFileDialog.getOpenFileNames(self.ui, caption='Import nmap XML output', filter='*.xml')
         if filenames:
             self.controller.start_parse_nmap_data(self, 'xml', filenames)
 
     def dialog_scan_host(self):
-        new_scan_dialog = New_Scan()
+        new_scan_dialog = New_Scan(self.ui)
         new_scan_dialog.ui.target.setFocus()
 
         if new_scan_dialog.exec():
@@ -708,7 +711,7 @@ class View:
         tab_index = self.ui.ui.application_TabWidget.addTab(tab, title)
 
         if self.controller.get_job(job_id) and self.controller.get_job(job_id).state()._value_ > 0:  # {0: 'Not running', 1: 'Starting', 2: 'Running'}
-            self.ui.ui.application_TabWidget.setTabIcon(tab_index, QIcon("icons/loading.gif"))
+            self.ui.ui.application_TabWidget.setTabIcon(tab_index, QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/loading.gif"))
 
         self.app_tabs[tab_index] = {'widget': tab, 'job_id': job_id}
         self.link_job_and_widget(job_id, tab)
@@ -749,7 +752,7 @@ class View:
 
         # Setup nmap tab
         self.app_tabs['Nmap'].setReadOnly(True)
-        self.app_tabs["Nmap"].setStyleSheet("background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};")
+        self.app_tabs["Nmap"].setStyleSheet(f"background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};")
 
         # Setup creds tab
         self.app_tabs['Credentials'].setColumnCount(5)
@@ -837,7 +840,7 @@ class View:
         ## Application tabs
         for app in host_details['external_tabs']:
             if app['text']:
-                self.new_tab(app['title'], app['job_id'], app['text'].replace(chr(0), ""))
+                self.new_tab(app['title'], app['job_id'], Job.convert_raw_output_to_html(app['cmdline'], app['text']))
             else:
                 self.new_tab(app['title'], app['job_id'], "")
 
@@ -874,7 +877,7 @@ class View:
                 if job.state() == 2:
                     question = "The currently running program will be killed, and tab content will be discarded. Are you sure ?"
 
-            if QMessageBox.question(None, 'Confirmation', question) != QMessageBox.Yes:
+            if QMessageBox.question(self.ui, 'Confirmation', question) != QMessageBox.Yes:
                 return
 
         self.controller.remove_tab(self.app_tabs[tab_index])
@@ -917,10 +920,10 @@ class View:
     def switch_to_host_tab(self, tableview: QTableView):
         selectedRows = set([i.row() for i in tableview.selectedIndexes()])
         if len(selectedRows) > 1:
-            QMessageBox.warning(None, "Error", "Please select only one host at a time.")
+            QMessageBox.warning(self.ui, "Error", "Please select only one host at a time.")
             return
         if len(selectedRows) == 0:
-            QMessageBox.warning(None, "Error", "Please select a host to view it in the Hosts tab.")
+            QMessageBox.warning(self.ui, "Error", "Please select a host to view it in the Hosts tab.")
             return
 
         self.controller.switch_to_host(tableview.model().itemData(tableview.selectedIndexes()[0])['host_id'])

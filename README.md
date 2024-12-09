@@ -23,9 +23,10 @@ $ pipenv run python qtrecon.py
 
 ## Configuration
 
-Configuration is a key element of QtRecon. The behavior of the tool, and all external commands can be customized that way. A single json contains all settings, and if many default values are unlikely to be changed, every pentester will have to create his own setup. Everything is configurable from the graphical interface, however, editing the JSON directly is still a viable option.
+Configuration is a key element of QtRecon. The behavior of the tool, and all external commands can be customized that way. A single json contains all settings, and if many default values are unlikely to be changed, every pentester will have to create his own setup. Everything is configurable from the graphical interface, however, editing the JSON directly is still a viable option. QtRecon comes with a default configuration that can be used as a base.
 
-Most of the customization resides in the *user_binaries*, *port_associations*, *autorun*, and *user_prefs* sections :
+<details>
+  <summary>If you're interested the structure of the json configuration file, here is how it works</summary>
 
 - *core_binaries* : contains main programs used, such as nmap, graphical console program and pkexec for elevated scan 
 - *user_binaries* : contains all program used, with the arguments, working directory, and other settings
@@ -37,71 +38,7 @@ Most of the customization resides in the *user_binaries*, *port_associations*, *
 - *screenshots* : settings for the screenshot module
 - *nmap_options* : default settings for nmap
 
-### core_binaries
-
-This section contains the path to nmap, pkexec, your favorite graphical terminal, and their associated arguments.
-
-### user_binaries
-
-This section defines all your programs to use with QtRecon. At this point, you should declare every program that you use during your assessment, whether those tools must launched automatically or manually (this behavior is configured in a later section).
-
-The following example defines the program *Firefox* to be launched as detached (no tab will be created upon execution), with an icon to decorate the entry in the menu, using a temporary profile:
-
-```json
-    "user_binaries": {
-        "firefox": {
-            "name": "Firefox",
-            "text": "Launch Firefox",
-            "detached": true,
-            "in_terminal": false,
-            "edit_before_launch": false,
-            "binary": "/usr/bin/firefox",
-            "icon": "/usr/share/icons/hicolor/256x256/apps/firefox.png",
-            "args": ["-P", "tmp", "http://%%%IP%%%:%%%PORT%%%/"],
-            "working_directory": "/tmp"
-        }
-    },
- ```
-
-Not all options are mandatory, as "in_terminal" (defaults to false), "working_dir" and "icon" are optional.
-
-### ports_associations
-
-The ports_associations section defines associations between programs previously declared and remote services discovered, identified by their level 4 protocol (TCP / UDP), and network port number. It allows you to run a program with a right click on a service :
-
-![Main window](help/ports_associations.png)
-
-The following configuration links firefox and netcat to all tcp service found, nikto to ports 80 and 443, and enum4linux for port 139 and 445:
-
-```json
-    "ports_associations": {
-        "tcp" : {
-            "any": [
-                "netcat",
-                "firefox",
-            ],
-            "80": [
-                "nikto"
-            ],
-            "139": [
-                "enum4linux-ng"
-            ],
-            "443": [
-                "nikto"
-            ],
-            "445": [
-                "enum4linux-ng"
-            ]
-        },
-        "udp": {
-            "161": [
-                "onesixtyone"
-            ]
-        }
-    }
-```
-
-### autorun
+Most of the customization resides in the *user_binaries*, *port_associations*, *autorun*, and *user_prefs* sections :
 
 The autorun section defines programs to be run automatically when ports are found. The structure is the same as the ports_associations section. The following config automatically runs nuclei as soon as any TCP port is open on a target, and a dirb command for 80 and 443 ports :
 
@@ -179,17 +116,35 @@ The screenshot module helps when you need a screenshot you forgot to take while 
  - processes_blacklist : This option is not visible from the GUI, it filters out all processes in the dedicated database
  - processes_ppid_blacklist : This option is not visible from the GUI, it filters out all processes which have specified ppid
 
-# Credentials
-
-You can add credentials for a specific host, and depending on its type (password or hash), it can be used to integrate your command line at runtime. It you launch a command with %%%PASSWORD%%% or %%%HASH%%%, and have valid credentials, QtRecon will ask if they must be used.
-
 # Privileged scans
 
 The final XML file created by root must be readable by your user, meaning that a restrictive umask won't let you parse nmap run as root (needed for OS detection and syn scan mode). In that case, you have to run this tool as root, and put an empty string in core_binaries->graphical_su->binary
 
+</details>
+
+# Credentials
+
+You can add credentials for a specific host, and depending on its type (password or hash), it can be used to integrate your command line at runtime. It you launch a command with %%%PASSWORD%%% or %%%HASH%%%, and have valid credentials, QtRecon will ask if they must be used. The following variables are replaced when executing a command:
+
+- %%%DOMAIN%%%
+- %%%USERNAME%%%
+- %%%PASSWORD%%%
+- %%%HASH%%%
+- %%%SSH_KEY%%%
+
+# Automatic screenshots
+
+QtRecon can automatically grab screenshots of your screen every few X seconds. It can be configured to not take screenshot while the screen is locked, or only when a certain amount of pixel is different from the previous screenshot. It can help save screenshots of proofs when you are not paying attention.
+
 # Changelog & Todos
 
 ## Changelog
+
+v1.7:
+- Credentials that have a domain field different from 'localhost' or 'hostname' can be used on all machines 
+- Better error handling
+- Visual and workflow bug fixes
+- conf.json file is now in $XDG_CONFIG_HOME/qtrecon/conf.json (or $home/.config/qtrecon/conf.json)
 
 v1.6:
 - Added different types of nmap scan
@@ -236,12 +191,13 @@ v1.1:
 
 ## Todo list
 
+- [ ] Pool of process in jobmodel ? 
+- [ ] Readme to re-organize
+- [ ] Search in application tabs
 - [ ] Rename tab + icon when job is still running
 - [ ] Log changes of IP
 - [ ] better check of conf (port association and autorun, to user_binaries, and check all mandatory fields are there)
-- [ ] Add confirmation when data is about to be erased (same IP) ?
 - [ ] notes with rich text ? Integrated cherrytree or equivalent ?
-- [ ] Teamserver ?
 
 ## bugs
 

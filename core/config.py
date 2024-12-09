@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-
+from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
 
 
@@ -9,6 +9,7 @@ class Config():
     config = None
     config_template_filename = "conf.json.example"
     config_filename = "conf.json"
+    config_root_path = ""
     default_configuration_loaded = False
     default_configuration = {  # Contains default options that might be missing from existing user configurations
         'user_prefs' :  {'monospaced_fonts': 'Hack, DejaVu Sans Mono, Droid Sans Mono, Courier, Monospace Regular'},
@@ -54,31 +55,40 @@ class Config():
     @staticmethod
     def save_config():
         configuration = json.dumps(Config.config, indent=4)
-        file_path = os.path.realpath(os.path.dirname(__file__))
-        root_path = os.path.realpath(os.path.dirname(file_path))
-        with open(f'{root_path}/{Config.config_filename}', 'w') as f:
+        with open(f'{Config.config_root_path}/{Config.config_filename}', 'w') as f:
             f.write(configuration)
 
     @staticmethod
     def load_config(use_default_configuration = False, load_previous_conf_if_current_fails = False):
+        if (value := os.environ.get("XDG_CONFIG_HOME")) and (path := Path(value)).is_absolute():  # Checking if XDG_CONFIG_HOME exists
+            root_config_folder = path / "qtrecon"
+        else:
+            root_config_folder = Path.home() / ".config/qtrecon"
+        Config.config_root_path = root_config_folder
+
         if use_default_configuration:
             Config.default_configuration_loaded = True
             configuration_file_to_use = Config.config_template_filename
+            root_config_folder = os.path.realpath(os.path.dirname(os.path.realpath(os.path.dirname(__file__))))  # Taking default lconfig file next to binary
         else:
             configuration_file_to_use = Config.config_filename
 
-        file_path = os.path.realpath(os.path.dirname(__file__))
-        root_path = os.path.realpath(os.path.dirname(file_path))
+        if not os.path.isdir(Config.config_root_path) and os.path.isfile(Config.config_root_path):
+            os.remove(Config.config_root_path)
+        try:
+            os.mkdir(Config.config_root_path)
+        except FileExistsError:
+            pass
 
         try:
-            with open(f'{root_path}/{configuration_file_to_use}', 'r') as f:
+            with open(f'{root_config_folder}/{configuration_file_to_use}', 'r') as f:
                 conf = json.load(f)
         except FileNotFoundError as e:
             if use_default_configuration:
                 print(f"Default configuration file not found: {e}. Exiting.")
                 sys.exit(1)
             else:
-                print(f"Configuration file not found: {e}. Falling back to default example configuration.")
+                print(f"Configuration file not found: {e}. Falling back to default example configuration, and creating a new configuration file in {root_config_folder}/{configuration_file_to_use}.")
                 Config.load_config(use_default_configuration = True)
                 return
         except json.decoder.JSONDecodeError as e:
@@ -112,6 +122,9 @@ class Config():
                     os.mkdir(Config.config['paths'][path])
                 except FileExistsError:
                     pass
+                except PermissionError:
+                    print(f"Work folder {Config.config['paths'][path]} doesn't exist on this filesystem and cannot be created (permission issue). Specify another path in the configuration.")
+                    sys.exit(6)
 
     @staticmethod
     def check_binaries() -> dict:

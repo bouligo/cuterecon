@@ -1,3 +1,5 @@
+import re
+
 from PySide6.QtCore import QProcess
 from ansi2html import Ansi2HTMLConverter
 import os
@@ -34,11 +36,26 @@ class Job(QProcess):
         self.stderr += decoded
         self.output_text += decoded
 
-    def get_output_text(self):
-        command_line = f'<span style="color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">$ {self.program()} {" ".join(self.arguments())}</span>'
-
+    @staticmethod
+    def convert_raw_output_to_html(cmdline: str, content: str):
         conv = Ansi2HTMLConverter()
-        return command_line + conv.convert(self.output_text)
+        if cmdline:
+            output = f'$ {cmdline}\n{content}'
+        else:
+            if content.startswith('<span style="color: white;'):  # Compatibility with databases created through previous versions of QtRecon
+                return content
+            else:
+                output = content
+
+        try:
+            html = conv.convert(output)
+        except ValueError:
+            html = conv.convert(output.replace(chr(0), ""))
+
+        return re.sub('.body_foreground {.*}', f".body_foreground {{ color: #BBBBBB; font-family: {Config.get()['user_prefs']['monospaced_fonts']} }}", html)
+
+    def get_output_text(self):
+        return self.convert_raw_output_to_html(f"{self.program()} {" ".join(self.arguments())}", self.output_text)
 
     # Unused for now
     def get_stdout_only(self):

@@ -1,3 +1,6 @@
+import os
+import sys
+
 from PySide6.QtCore import QAbstractTableModel, Qt, Signal
 import ipaddress  # sort by IP
 
@@ -14,7 +17,7 @@ class HostModel(QAbstractTableModel):
         self.controller = controller
         self.hosts = []
         self.headers = ['host_id', 'OS', 'IP', 'Hostname']
-        self.os = {'linux': QIcon("icons/linux.png"), 'windows': QIcon("icons/windows.png"), 'ios': QIcon("icons/ios.png"), 'unknown': QIcon("icons/unknown.png")}
+        self.os = {'linux': QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/linux.png"), 'windows': QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/windows.png"), 'ios': QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/ios.png"), 'unknown': QIcon(os.path.abspath(os.path.dirname(sys.argv[0])) + "/icons/unknown.png")}
         self.filter = ""
         self.filter_type = "host"
 
@@ -115,16 +118,16 @@ class HostModel(QAbstractTableModel):
             Database.request("update hosts set highlight = NULL where id = ?", (host_id,))
         self.update_data()
 
-    def create_external_tab(self, host_id: int, app_name: str, job_id: int):
-        Database.request("insert into hosts_tabs(host_id, job_id, title) values(?, ?, ?)", (host_id, job_id, app_name))
+    def create_external_tab(self, host_id: int, app_name: str, cmdline: str, job_id: int):
+        Database.request("insert into hosts_tabs(host_id, job_id, cmdline, title) values(?, ?, ?, ?)", (host_id, job_id, cmdline, app_name))
 
         job = self.controller.get_job(job_id)
 
-        self.update_external_tab(job_id, job.get_output_text())
+        self.update_external_tab(job_id, job.output_text)
         job.readyReadStandardOutput.connect(
-            lambda: self.update_external_tab(job_id, job.get_output_text()))
+            lambda: self.update_external_tab(job_id, job.output_text))
         job.readyReadStandardError.connect(
-            lambda: self.update_external_tab(job_id, job.get_output_text()))
+            lambda: self.update_external_tab(job_id, job.output_text))
 
     def remove_external_tab(self, job_id: int):
         Database.request('delete from hosts_tabs where job_id = ?', (job_id, ))
