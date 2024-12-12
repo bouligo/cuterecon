@@ -5,6 +5,7 @@ from PySide6.QtCore import QAbstractTableModel, Qt, Signal
 import ipaddress  # sort by IP
 
 from PySide6.QtGui import QFont, QColor, QIcon
+from PySide6.QtWidgets import QMessageBox
 
 from core.database import Database
 
@@ -96,7 +97,10 @@ class HostModel(QAbstractTableModel):
             Database.request("update hosts set nmap = ? where ip = ?", (hosts[host], host))
 
     def change_host_ip(self, host_id: int, new_ip: str):
-        Database.request("update hosts set ip = ? where id = ?", (new_ip, host_id))
+        if Database.request("SELECT count(id) as count FROM hosts where ip = ?", (new_ip,)).fetchone()['count'] > 0:
+            QMessageBox.critical(self.controller.ui, "Host already exists !", "Cannot change IP address as it is already used by another machine in this workspace.")
+        else:
+            Database.request("update hosts set ip = ? where id = ?", (new_ip, host_id))
         self.update_data()
 
     def change_host_hostname(self, host_id: int, new_hostname: str):

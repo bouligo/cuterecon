@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'settingsXZtyGz.ui'
+## Form generated from reading UI file 'settingslkdniM.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.0
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -105,7 +105,7 @@ class Ui_Dialog(object):
         self.tab_user_binaries_scrollArea_content = QWidget()
         self.tab_user_binaries_scrollArea_content.setObjectName(u"tab_user_binaries_scrollArea_content")
         self.tab_user_binaries_scrollArea_content.setGeometry(QRect(0, 0, 795, 430))
-        self.tab_user_binaries_scrollArea_content.setStyleSheet(u"background-color: rgb(255, 255, 255);")
+        self.tab_user_binaries_scrollArea_content.setStyleSheet(u"")
         self.tab_user_binaries_scrollArea.setWidget(self.tab_user_binaries_scrollArea_content)
 
         self.verticalLayout_4.addWidget(self.tab_user_binaries_scrollArea)

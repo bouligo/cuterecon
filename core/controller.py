@@ -26,7 +26,7 @@ from utils.nmapImporter import ProgressBar_import_hosts
 
 
 class Controller:
-    APPLICATION_VERSION = "1.7"
+    APPLICATION_VERSION = "1.7.1"
     autosave_timer = QTimer()
     progression_bar_timer = QTimer()
     screenshot_mgr = None
@@ -432,7 +432,7 @@ class Controller:
             creds_types = [row['type'] for row in Database.request("SELECT DISTINCT type FROM hosts_creds").fetchall()]
             for creds_type in creds_types:
                     if f"%%%{creds_type.upper()}%%%" in  ' '.join(program['args']):
-                        creds_from_database += Database.request("SELECT * FROM hosts_creds, hosts WHERE (host_id = ? AND type = ?) OR (hosts.id = hosts_creds.host_id AND (lower(domain) != 'localhost' and lower(domain) != lower(hosts.hostname)) AND type = ?)", (host_dst['id'], creds_type, creds_type)).fetchall()
+                        creds_from_database += Database.request("SELECT DISTINCT hosts_creds.type, hosts_creds.domain, hosts_creds.username, hosts_creds.password FROM hosts_creds, hosts WHERE (host_id = ? AND type = ?) OR (hosts.id = hosts_creds.host_id AND (lower(domain) != 'localhost' and lower(domain) != lower(hosts.hostname)) AND type = ?)", (host_dst['id'], creds_type, creds_type)).fetchall()
             if creds_from_database:
                 reply = QMessageBox.question(self.ui, 'Valid credentials are available', f"Valid credentials are available to use against this target. Do you want to use them ?")
                 if reply == QMessageBox.Yes:

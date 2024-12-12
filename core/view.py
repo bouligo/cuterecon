@@ -104,20 +104,20 @@ class View:
                         current_string += chunk + '<br />'
                 elif isinstance(chunk, list):
                     if final_subsection and '<h' not in final_subsection:
-                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()["user_prefs"]["monospaced_fonts"]};">{final_subsection}</p>'
                     current_string += create_subsection(level+1, chunk)
 
                 if '<h' in current_string:
                     if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
-                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()["user_prefs"]["monospaced_fonts"]};">{final_subsection}</p>'
                     final_subsection += current_string
                 else:
                     final_subsection += current_string
                     if (i == len(content)-1 or isinstance(content[i+1], list)) and final_subsection and '<h' not in final_subsection and '<p' not in final_subsection:
-                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
+                        final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()["user_prefs"]["monospaced_fonts"]};">{final_subsection}</p>'
 
             if final_subsection and '<h' not in final_subsection:
-                final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()['user_prefs']['monospaced_fonts']};">{final_subsection}</p>'
+                final_subsection = f'<p style="background-color: black; color: white; font-family: {Config.get()["user_prefs"]["monospaced_fonts"]};">{final_subsection}</p>'
 
             # Clean-up
             final_subsection = re.sub('(<p[^>]+>)(<p[^>]+>)+', '\\1', final_subsection)

@@ -55,7 +55,7 @@ class Job(QProcess):
         return re.sub('.body_foreground {.*}', f".body_foreground {{ color: #BBBBBB; font-family: {Config.get()['user_prefs']['monospaced_fonts']} }}", html)
 
     def get_output_text(self):
-        return self.convert_raw_output_to_html(f"{self.program()} {" ".join(self.arguments())}", self.output_text)
+        return self.convert_raw_output_to_html(f"{self.program()} {' '.join(self.arguments())}", self.output_text)
 
     # Unused for now
     def get_stdout_only(self):

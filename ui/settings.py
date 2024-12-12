@@ -411,7 +411,7 @@ class Settings(QDialog):
         return ret
 
     def add_new_user_binary(self, program_id: str = "", name: str = "", text: str = "", detached: bool = False, in_terminal: bool = False, edit_before_launch: bool = False, binary: str = "", icon: str = "", working_directory: str = "", args: list = list()) -> QFrame:
-        frame = QFrame()
+        frame = QFrame(self.ui.tab_user_binaries)
         frame.setFrameShape(QFrame.StyledPanel)
         frame.setFrameShadow(QFrame.Plain)
         frame.setLineWidth(3)

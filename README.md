@@ -140,6 +140,12 @@ QtRecon can automatically grab screenshots of your screen every few X seconds. I
 
 ## Changelog
 
+v1.7.1:
+- Fixed a crash with python < 3.12
+- Fixed a bug where database crashed when trying to assign an already existing IP address
+- Fixed a bug where a set of credentials could appear several time in the popup dialog
+- Fixed a bug with dark-theme systems
+
 v1.7:
 - Credentials that have a domain field different from 'localhost' or 'hostname' can be used on all machines 
 - Better error handling
