@@ -140,6 +140,14 @@ QtRecon can automatically grab screenshots of your screen every few X seconds. I
 
 ## Changelog
 
+v1.7.2:
+- Fixed a bug with filesystem paths not expending
+- Fixed a bug with several nmap targets when launching a scan
+- Fixed a bug in search when host did not have any app tab
+- Fixed a bug when launching manually a command
+- Fixed a bug when re-launching autorun program for a specific host
+- Fixed a bug when merging results with an XML file (TODO)
+
 v1.7.1:
 - Fixed a crash with python < 3.12
 - Fixed a bug where database crashed when trying to assign an already existing IP address
@@ -196,7 +204,7 @@ v1.1:
 - bug fixes
 
 ## Todo list
-
+- [ ] Comment on passwords
 - [ ] Pool of process in jobmodel ? 
 - [ ] Readme to re-organize
 - [ ] Search in application tabs
@@ -207,5 +215,5 @@ v1.1:
 
 ## bugs
 
+- [ ] After scanning a host, when importing XML files : freeze (need to send a signal to the controller that will handle the popup, so ask_user_what_to_do must become a signal) # https://forum.qt.io/topic/54335/is-there-any-way-to-use-qmessagebox-in-the-other-thread/7
 - [ ] Cannot stop running privileged nmap as it was launched under pkexec
-- [ ] Copy/paste doesn't work under wayland ?

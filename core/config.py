@@ -76,7 +76,7 @@ class Config():
         if not os.path.isdir(Config.config_root_path) and os.path.isfile(Config.config_root_path):
             os.remove(Config.config_root_path)
         try:
-            os.mkdir(Config.config_root_path)
+            os.makedirs(os.path.expanduser(Config.config_root_path))
         except FileExistsError:
             pass
 
@@ -119,7 +119,7 @@ class Config():
                     sys.exit(5)
             else:
                 try:
-                    os.mkdir(Config.config['paths'][path])
+                    os.makedirs(os.path.expanduser(Config.config['paths'][path]))
                 except FileExistsError:
                     pass
                 except PermissionError:

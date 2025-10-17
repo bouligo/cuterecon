@@ -21,7 +21,7 @@ class JobModel(QAbstractTableModel):
 
         # Create directory for nmap outputs
         if not os.access(self.nmap_output_folder, os.F_OK):  # Check for existence
-            os.mkdir(self.nmap_output_folder)
+            os.makedirs(os.path.expanduser(self.nmap_output_folder))
 
     def update_data(self):
         self.jobs = Database.request("select * from jobs order by id ASC").fetchall()
@@ -192,7 +192,10 @@ class JobModel(QAbstractTableModel):
             args.append(f"-p{ports}")
         if additional_args:
             args += shlex.split(additional_args)
-        args.append(target)
+
+        target = target.replace(', ', ',')  # If user specifies several targets with a comma and a space (non-standard nmap expected input)
+        target = target.replace(',', ' ')  # If user specifies several targets with a comma (non-standard nmap expected input)
+        args += target.split()
 
         privileged_scan_types = ['-sS', '-sA', '-sW', '-sM', '-sN', '-sF', 'sX']
         self.add_job(JobType.SCAN, os_detection or type in privileged_scan_types or '-sU' in args, command_from_conf, args_from_conf + args, "", "")

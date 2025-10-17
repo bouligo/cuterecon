@@ -146,6 +146,7 @@ class Settings(QDialog):
             if os.path.isdir(self.ui.nmap_output_dir.text()):
                 try:
                     filehandle = open(self.ui.nmap_output_dir.text() + "/write-check", 'w')
+                    os.remove(filehandle.name)
                 except IOError:
                     QMessageBox.warning(self, "Error in path configuration", f"Work folder {self.ui.nmap_output_dir.text()}is not writable. Specify another path in the configuration.")
                     self.ui.nmap_output_dir.setStyleSheet("background-color: rgba(255, 0, 0, 50);")
@@ -154,7 +155,7 @@ class Settings(QDialog):
                     return False
             else:
                 try:
-                    os.mkdir(self.ui.nmap_output_dir.text())
+                    os.makedirs(os.path.expanduser(self.ui.nmap_output_dir.text()))
                 except FileExistsError:
                     pass
                 except PermissionError:

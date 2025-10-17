@@ -157,4 +157,5 @@ class ProgressBar_import_hosts():  # https://stackoverflow.com/questions/4715618
 
     def ask_user_what_to_do(self, ip: str, hostname: str):
         dialog_box = Replace_host_data(self.progress if self.is_displayed else self.caller.ui, ip, hostname)
-        self.queue.put([dialog_box.exec(), dialog_box])
+        # self.queue.put([dialog_box.exec(), dialog_box])
+        self.queue.put([dialog_box.ui.merge_all, dialog_box])

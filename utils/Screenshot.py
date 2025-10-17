@@ -64,8 +64,8 @@ class Screenshot:
         self.__dict__.update(kwargs)
 
         self.begin_datetime = datetime.now()
-        self.folder = self.work_folder + f"Autoscreen - {self.begin_datetime.year}{self.begin_datetime.month:02}{self.begin_datetime.day:02}_{self.begin_datetime.hour:02}{self.begin_datetime.minute:02}{self.begin_datetime.second:02}"
-        os.mkdir(self.folder)
+        self.folder = self.work_folder + f"/Autoscreen - {self.begin_datetime.year}{self.begin_datetime.month:02}{self.begin_datetime.day:02}_{self.begin_datetime.hour:02}{self.begin_datetime.minute:02}{self.begin_datetime.second:02}"
+        os.makedirs(os.path.expanduser(self.folder))
         if self.include_processes or self.include_ocr:
             self.create_DB()
             self.create_search_script()
@@ -125,7 +125,7 @@ if __name__ == '__main__':
             f.write(search_script)
 
     def save_archive(self):
-        self.archive = f'{dst_folder}Autoscreen-{self.begin_datetime.year}{self.begin_datetime.month:02}{self.begin_datetime.day:02}_{self.begin_datetime.hour:02}{self.begin_datetime.minute:02}{self.begin_datetime.second:02}.tar.xz'
+        self.archive = f'{self.dst_folder}/Autoscreen-{self.begin_datetime.year}{self.begin_datetime.month:02}{self.begin_datetime.day:02}_{self.begin_datetime.hour:02}{self.begin_datetime.minute:02}{self.begin_datetime.second:02}.tar.xz'
         cmd = ['tar', 'cJvpf', self.archive, '-C', self.folder, '.']
         tar_output = subprocess.Popen(cmd,
                                       stdout=subprocess.PIPE,

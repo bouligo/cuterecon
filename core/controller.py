@@ -26,7 +26,7 @@ from utils.nmapImporter import ProgressBar_import_hosts
 
 
 class Controller:
-    APPLICATION_VERSION = "1.7.1"
+    APPLICATION_VERSION = "1.7.2"
     autosave_timer = QTimer()
     progression_bar_timer = QTimer()
     screenshot_mgr = None
@@ -256,11 +256,11 @@ class Controller:
 
         '''
         if filetype == 'xml':
-            if isinstance(caller, View):  # From the 'Import hosts' feature
-                ProgressBar_import_hosts(self, True, data)
-            if isinstance(caller, JobModel):  # From a scan
-                parser = ProgressBar_import_hosts(self, False, data)
-                self.finished_parse_nmap_data(self, parser.worker.returning_host_ids)
+            #if isinstance(caller, View):  # From the 'Import hosts' feature
+            #    ProgressBar_import_hosts(self, True, data)
+            #if isinstance(caller, JobModel):  # From a scan
+            parser = ProgressBar_import_hosts(self, False, data)
+            self.finished_parse_nmap_data(self, parser.worker.returning_host_ids)
 
         elif filetype == 'nmap':
             nmap_parser = NmapParser(data)
@@ -304,12 +304,22 @@ class Controller:
     def filter_hosts_for_port_table(self, proto: str, port: str):
         self.hosts_for_port_model.filter_hostlist('port', f"{proto}/{port}")
 
-    def autorun(self, new_hosts: dict):
+    def autorun(self, new_hosts: dict | list):
         """
 
         :param new_hosts: {host_id: {'tcp': [], 'udp': []}   # tcp and udp are empty if new host (or if every service must be autorun'd again
+        :param new_hosts: [2, 5, 7]  # list of hosts_id
         :return:
         """
+        if isinstance(new_hosts, list):  # then it is just the list of id ; convert it to a dict with open ports as expected
+            _ = {}
+            for new_host in new_hosts:
+                _[new_host] = {'tcp': [], 'udp': []}
+                new_host_details = self.host_model.get_host_details(new_host)
+                for port in new_host_details['ports']:
+                    _[new_host][port['proto']].append(port['port'])
+            new_hosts = _
+
         for new_host in new_hosts.keys():
             host_details = self.host_model.get_host_details(new_host)
             must_autorun_everything = not (len(new_hosts[new_host]['tcp'])!=0 or len(new_hosts[new_host]['udp'])!=0)
@@ -365,7 +375,7 @@ class Controller:
             return notes + tabs # pas utile ?
 
         else:
-            hosts_sql = Database.request("select distinct hosts.ip from hosts, hosts_tabs where hosts.id = hosts_tabs.host_id and (hosts_tabs.text LIKE '%' || ? || '%' OR hosts.notes LIKE '%' || ? || '%')", (search_term, search_term)).fetchall()
+            hosts_sql = Database.request("select distinct hosts.ip from hosts where hosts.notes LIKE '%' || ? || '%' UNION SELECT distinct hosts.ip from hosts, hosts_tabs where hosts.id = hosts_tabs.host_id and hosts_tabs.text LIKE '%' || ? || '%'", (search_term, search_term)).fetchall()
             return sorted(list(map(lambda host: host['ip'], hosts_sql)), key=ipaddress.IPv4Address)
 
     def remove_tab(self, tab: dict):
@@ -526,7 +536,7 @@ class Controller:
             return
         if not os.path.exists(work_folder):
             try:
-                os.mkdir(work_folder)
+                os.makedirs(os.path.expanduser(work_folder))
             except Exception as e:
                 QMessageBox.critical(self.ui, "Error", "Temporary work folder does not exist and cannot be created !\n"+str(e))
                 return
@@ -538,7 +548,7 @@ class Controller:
             return
         if not os.path.exists(dst_folder):
             try:
-                os.mkdir(dst_folder)
+                os.makedirs(os.path.expanduser(dst_folder))
             except Exception as e:
                 QMessageBox.critical(self.ui, "Error", "Final work folder does not exist and cannot be created !\n"+str(e))
                 return

@@ -462,11 +462,11 @@ class View:
             clipboard = QApplication.clipboard()
             clipboard.setText(description)
 
-        if action == copy_uri:
+        elif action == copy_uri:
             clipboard = QApplication.clipboard()
             clipboard.setText(f"{host['ip']}:{port}")
 
-        if action.data() == "QtRecon:STATIC_CUSTOM_COMMAND":
+        elif action.data() == "QtRecon:STATIC_CUSTOM_COMMAND":
             self.launch_custom_command_dialog()
         else:
             self.controller.new_job(Config.get()['user_binaries'][action.data()])
@@ -594,7 +594,7 @@ class View:
         custom_command_dialog.ui.detached.stateChanged.connect(lambda checked: custom_command_dialog.in_terminal.setEnabled(checked))
         custom_command_dialog.ui.command.setFocus()
 
-        if custom_command_dialog.show():
+        if custom_command_dialog.exec():
             command = custom_command_dialog.ui.command.text()
 
             if command:
